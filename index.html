@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Cahier numérique</title><link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%228.5%22 font-size=%228%22>📓</text></svg>">
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Cahier numérique</title><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="theme-color" content="#0b1020"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Cahier"><text y=%228.5%22 font-size=%228%22>📓</text></svg>">
 <style>
 :root{--bg:#f4efe6;--ink:#2a2622;--card:#fffdf8;--line:#d9d2c3;--acc:#8a2b2b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1a17;--ink:#eee8dc;--card:#26231f;--line:#3d3830;--acc:#e08a8a;color-scheme:dark}}
@@ -87,5 +87,6 @@ await up('cn_cahiers',cs.map(c=>({id:c.id,cours:c.cours,prof:c.prof||'',color:c.
 await up('cn_pages',ps.map(([c,p])=>({id:p.id,cahier_id:c.id,chap:p.chap||'',sujet:p.sujet||'',start_at:p.start,end_at:p.end||0,html:p.html||'',updated_at:p.u||Date.now()})));
 cs.forEach(c=>c.d=0);ps.forEach(([c,p])=>p.d=0);stat('Synchronisé à '+hm(Date.now()));raw();if($('.shelf'))home()}
 catch(e){stat('Hors ligne ou erreur : sera réessayé');if(e&&e.code==401)D.s=null}finally{busy=0}}
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 home();sync();
 </script></body></html>
