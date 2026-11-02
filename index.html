@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"><title>Cahier numérique</title><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="theme-color" content="#0b1020"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Cahier"><text y=%228.5%22 font-size=%228%22>📓</text></svg>">
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"><title>Cahier numérique</title><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="theme-color" content="#0b1020"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Cahier">
 <style>
 :root{--bg:#f3f4fb;--ink:#12142b;--mut:#12142b99;--card:#fff;--line:#12142b1a;--acc:#4f46e5;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1020;--ink:#eef0ff;--mut:#eef0ff99;--card:#ffffff12;--line:#ffffff1f;--acc:#818cf8;color-scheme:dark}}
@@ -19,6 +19,10 @@ header button.p,.eh button.p{width:auto;padding:8px 16px}
 .cv::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:#ffffff22}
 .cv b{font:800 21px/1.1 system-ui;letter-spacing:-.02em}.cv small{margin-bottom:auto;opacity:.85}.cv span{opacity:.8;font-size:13px}
 .cv.add{background:var(--card);color:var(--ink);border:1.5px dashed var(--line);align-items:center;justify-content:center;text-align:center;box-shadow:none;font-weight:600}.cv.add::after{display:none}
+.row{display:flex;gap:8px;align-items:flex-end;height:180px;padding:0 12px;margin-bottom:18px;border-bottom:12px solid #6b4423;border-radius:0 0 6px 6px;box-shadow:0 12px 14px -8px #0007;background:linear-gradient(transparent 75%,#0000002a)}
+.bk{flex:0 0 calc(25% - 6px);border-radius:8px 8px 2px 2px;background:linear-gradient(90deg,#00000066,#ffffff33 14%,#00000012 62%,#00000050),var(--c);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:10px 2px;cursor:pointer;box-shadow:3px 0 8px #0005;box-sizing:border-box;overflow:hidden}
+.bk i{width:70%;height:5px;border-radius:3px;background:#ffffffaa}.bk b{writing-mode:vertical-rl;transform:rotate(180deg);font:700 14px system-ui;max-height:105px;overflow:hidden;text-overflow:ellipsis}.bk small{font-size:12px;opacity:.85}
+.bk.add{background:var(--card);border:1.5px dashed var(--line);box-shadow:none;color:var(--ink);justify-content:center;height:130px}.bk.add b{max-height:none}
 .hero{border-radius:28px;padding:24px;color:#fff;background:linear-gradient(160deg,#ffffff40,#00000070),var(--c);box-shadow:0 16px 40px #0005}
 .hero h2{font:800 34px/1.05 system-ui;letter-spacing:-.03em;margin:26px 0 6px}.hero p,.hero small,.hero em{opacity:.85;margin:0;font-style:normal}.hero small{display:block;margin-top:14px;letter-spacing:2px;font-size:11px}
 .rs{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:8px 0;cursor:pointer;display:grid;gap:2px}.rs small,.rs span{color:var(--mut);font-size:13px}
@@ -38,7 +42,7 @@ input{font:inherit;padding:12px;border-radius:14px;border:1px solid var(--line);
 #sp{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:#fff;background:radial-gradient(800px 600px at 80% 0,#6366f188,transparent),radial-gradient(700px 600px at 0 100%,#14b8a688,transparent),#0b1020;transition:opacity .5s}#sp.off{opacity:0;pointer-events:none}
 #sp img{width:132px;height:132px;border-radius:32px;box-shadow:0 20px 60px #6366f166;animation:fl .8s}#sp h1{font:800 44px/1 system-ui;letter-spacing:-.04em;margin:8px 0 0}#sp p{opacity:.75;margin:0}#sp span{position:absolute;bottom:calc(36px + env(safe-area-inset-bottom,0px));font-size:13px;opacity:.55}
 #t{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:20px;display:none;z-index:99}
-</style></head><body><div id="app"></div><div id="t"></div><div id="sp" onclick="hideSp()"><img src="icon-512.png" alt=""><h1>Cahier<br>numérique</h1><p>Vos cours. Vos notes. Pour toujours.</p><span>Touchez pour ouvrir</span></div>
+</style></head><body><div id="app"></div><div id="t"></div><div id="sp" onclick="hideSp()"><img src="icon-512.png" alt=""><h1>Cahier<br>numérique</h1><p>Vos cours. Vos notes. Pour toujours.</p><button class="p" onclick="hideSp()" style="width:auto;padding:14px 38px;margin-top:14px">Ouvrir mon cahier</button></div>
 <script>
 const K='cahier-num-v1';let D={c:[],bk:0};
 try{D=JSON.parse(localStorage.getItem(K))||D}catch(e){}
@@ -54,7 +58,11 @@ const COL=['#6366f1','#0ea5e9','#10b981','#f59e0b','#ec4899','#8b5cf6'];let cur=
 const nz=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const txt=h=>(h||'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
 function home(){cur=pg=null;const d=D.bk?'Dernière sauvegarde : '+dt(D.bk):'Aucune sauvegarde externe pour l’instant.';
-app.innerHTML=`<div class=top><img class=lg src=icon-192.png alt=""><h1>Cahier numérique</h1><button onclick="menu()">⋯</button></div><div class=sb><input id=q type=search placeholder="Rechercher dans mes cours et mes notes…" oninput="srch(this.value)"></div><div id=res></div><div class=shelf id=sh>${D.c.filter(c=>!c.del).map(c=>`<div class=cv style="--c:${c.color}" onclick="openB('${c.id}')"><small>${c.pages.length} page(s)</small><b>${esc(c.cours)}</b><span>${esc(c.prof)}</span></div>`).join('')}<div class="cv add" onclick="newB()"><div style="font-size:34px">＋</div>Nouveau cahier</div></div><p class=hint>${D.s?'☁️ Compte : '+esc(D.s.email)+'. '+(D.st||''):'Pas de compte : vos notes ne sont que sur cet appareil (⋯ pour activer la sauvegarde en ligne).'} Tout s’enregistre automatiquement sur cet appareil. ${d}</p>`}
+app.innerHTML=`<div class=top><img class=lg src=icon-192.png alt=""><h1>Cahier numérique</h1><button onclick="menu()">⋯</button></div><div class=sb><input id=q type=search placeholder="Rechercher dans mes cours et mes notes…" oninput="srch(this.value)"></div><div id=res></div><div class=shelf id=sh>${lib()}</div><p class=hint>${D.s?'☁️ Compte : '+esc(D.s.email)+'. '+(D.st||''):'Pas de compte : vos notes ne sont que sur cet appareil (⋯ pour activer la sauvegarde en ligne).'} Tout s’enregistre automatiquement sur cet appareil. ${d}</p>`}
+function lib(){const L=D.c.filter(c=>!c.del).sort((a,b)=>a.cours.localeCompare(b.cours,'fr'));
+const it=L.map(c=>`<div class=bk style="--c:${c.color};height:${150+(c.id.charCodeAt(c.id.length-1)%3)*14}px" onclick="openB('${c.id}')"><i></i><b>${esc(c.cours)}</b><small>${c.pages.length}</small></div>`);it.push('<div class="bk add" onclick="newB()"><b>＋ Nouveau</b></div>');
+let o='';for(let i=0;i<it.length;i+=4)o+='<div class=row>'+it.slice(i,i+4).join('')+'</div>';
+return `<p class=hint style="margin:16px 0 8px"><b>Ma bibliothèque</b> · ${L.length} cahier(s)</p>`+o}
 function srch(v){v=nz(v.trim());const r=$('#res'),sh=$('#sh');if(!v){r.innerHTML='';sh.style.display='';return}sh.style.display='none';let o='';
 D.c.filter(c=>!c.del).forEach(c=>{if(nz(c.cours+' '+(c.prof||'')).includes(v))o+=`<div class=rs onclick="openB('${c.id}')"><b>${esc(c.cours)}</b><small>Cahier · ${esc(c.prof||'')}</small></div>`;
 c.pages.forEach((p,i)=>{const t=txt(p.html),n=nz(t);if(!nz((p.chap||'')+' '+(p.sujet||'')+' '+t).includes(v))return;const k=n.indexOf(v);let sn='';if(k>=0)sn=esc(t.slice(Math.max(0,k-30),k))+'<mark>'+esc(t.slice(k,k+v.length))+'</mark>'+esc(t.slice(k+v.length,k+v.length+60));
@@ -118,5 +126,5 @@ cs.forEach(c=>c.d=0);ps.forEach(([c,p])=>p.d=0);stat('Synchronisé à '+hm(Date.
 catch(e){stat('Hors ligne ou erreur : sera réessayé');if(e&&e.code==401)D.s=null}finally{busy=0}}
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 function hideSp(){const e=$('#sp');if(e){e.classList.add('off');setTimeout(()=>e.remove(),600)}}
-home();sync();setTimeout(hideSp,2800);
+home();sync();
 </script></body></html>
