@@ -6,7 +6,7 @@ const V6MAX=10;let v6R=[];
 function v6login(msg){app.innerHTML=`<div class=top><img class=lg src=icon-192.png alt=""><h1>Cahier numérique</h1></div><div class=f><p>Connectez-vous ou créez un compte. L’accès au cahier s’ouvre après validation de votre paiement.</p><label>E-mail<input id=em type=email autocomplete=email></label><label>Mot de passe (6 caractères min.)<input id=pw type=password></label><button class=p onclick="v6auth(1)">Se connecter</button><button onclick="v6auth(0)">Créer un compte</button>${msg?'<p class=hint>'+esc(msg)+'</p>':''}</div>`}
 function v6wait(){const s=D.stt=='suspendu';app.innerHTML=`<div class=top><img class=lg src=icon-192.png alt=""><h1>${s?'Compte suspendu':'Paiement en attente'}</h1></div><div class=f><p>${s?'Votre accès est suspendu. Contactez l’administration.':`Votre compte <b>${esc(D.s.email)}</b> est créé, mais votre cahier s’ouvrira après validation de votre paiement par l’administration.`}</p><div class=card><small>Paiement par Airtel Money ou Illicocash</small><h3>0999983163</h3><small>Indiquez l’adresse e-mail de votre compte avec le paiement.</small></div><button class=p onclick="v6gate()">J’ai payé · vérifier mon accès</button><button onclick="v6out()">Se déconnecter</button></div>`}
 window.out=v6out;
-window.hideSp=function(){const e=$('#sp');if(e){e.classList.add('off');setTimeout(()=>e.remove(),600);v6gate()}};
+window.hideSp=function(){const e=$('#sp');if(e&&!e.dataset.x){e.dataset.x=1;e.classList.add('off');setTimeout(()=>e.remove(),600);v6gate()}};
 
 /* ---------- Accueil : boutons Reçues et Administration ---------- */
 const v6home=window.home;
@@ -81,11 +81,12 @@ function v6enter(id,email,after){
  if(D.own){v6store(D.own);v6load(id);D.own=id;raw();return after()}
  const n=(D.c||[]).filter(c=>!c.del).length;
  if(!n&&!(D.ev||[]).length){v6load(id);D.own=id;raw();return after()}
- const o=document.createElement('div');o.id='ak';
+ if(document.querySelector('[data-v6=dlg]'))return;
+ const o=document.createElement('div');o.id='ak';o.dataset.v6='dlg';
  o.innerHTML=`<div class=scb><b>Cahiers trouvés sur cet appareil</b><p class=hint>Cet appareil contient ${n} cahier(s) créé(s) avant la séparation des comptes. Sont-ils à vous (${esc(email)}) ?</p><div class=f><button class=p id=v6y>Oui, ce sont les miens</button><button id=v6n>Non, partir d’un cahier vide</button></div></div>`;
  document.body.appendChild(o);
- $('#v6y').onclick=()=>{o.remove();D.own=id;D.tour=D.tour||{};D.c.forEach(c=>{c.d=1;c.u=c.u||Date.now();c.pages.forEach(p=>{p.d=1;p.u=p.u||Date.now()})});raw();after()};
- $('#v6n').onclick=()=>{o.remove();try{localStorage.setItem('cn-user-ancien-appareil',JSON.stringify(Object.fromEntries(V6F.map(k=>[k,D[k]]))))}catch(e){}v6load(id);D.own=id;raw();after()};
+ o.querySelector('#v6y').onclick=()=>{o.remove();D.own=id;D.tour=D.tour||{};D.c.forEach(c=>{c.d=1;c.u=c.u||Date.now();c.pages.forEach(p=>{p.d=1;p.u=p.u||Date.now()})});raw();after()};
+ o.querySelector('#v6n').onclick=()=>{o.remove();try{localStorage.setItem('cn-user-ancien-appareil',JSON.stringify(Object.fromEntries(V6F.map(k=>[k,D[k]]))))}catch(e){}v6load(id);D.own=id;raw();after()};
 }
 async function v6auth(login){const em=$('#em').value.trim().toLowerCase(),pw=$('#pw').value;if(!em||pw.length<6)return toast('E-mail et mot de passe (6 caractères min.)');
 try{const j=await api(login?'/auth/v1/token?grant_type=password':'/auth/v1/signup',{m:'POST',b:{email:em,password:pw}},0);
