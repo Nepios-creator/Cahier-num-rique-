@@ -171,3 +171,14 @@ D.c=D.c.filter(c=>{const k=c.pages.length;c.pages=c.pages.filter(p=>p.d==1||G.ha
 if(c.d!=1&&!C.has(c.id)&&!c.pages.length){n++;return false}return true});
 if(n){try{localStorage.setItem('cn-retire-'+(D.own||'x'),bak)}catch(e){}raw();toast(n+' élément(s) étranger(s) à ce compte retiré(s)')}}
 catch(e){}}
+
+/* ---------- v6.3 : affichage ajusté à l'écran (plus besoin de dézoomer) ---------- */
+/* Cause : la liste des cahiers était posée dans une grille à 2 colonnes (.shelf) prévue pour des couvertures ;
+   les titres sur une seule ligne élargissaient la page au-delà de l'écran, d'où l'effet « zoomé ». */
+(()=>{const s=document.createElement('style');
+s.textContent='html,body{max-width:100%;overflow-x:clip}#app{box-sizing:border-box;width:100%;overflow-x:clip}'
++'.shelf{display:block!important}.shelf>*{min-width:0;max-width:100%;box-sizing:border-box}'
++'.bkr,.bi,.rs,.card,.cont,.hero,.stats,.stats>div,.top h1,.tt{min-width:0;max-width:100%;box-sizing:border-box}'
++'.scb,#ak,#sc{max-width:100vw;box-sizing:border-box}img,audio,video{max-width:100%}.sheet img{max-width:100%;height:auto}'
++'.top{flex-wrap:nowrap}.top h1{overflow-wrap:anywhere}';
+document.head.appendChild(s)})();
