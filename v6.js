@@ -97,7 +97,7 @@ if(id&&D.own!=id)return v6enter(id,D.s.email,v6gate);
 app.innerHTML='<p class=hint style="padding:60px 0;text-align:center">Vérification de votre accès…</p>';
 try{await tok();const r=await api('/rest/v1/cn_profils?select=statut,est_admin'),p=r[0];D.stt=p?p.statut:'en_attente';D.ok=D.stt=='valide';D.adm=!!(p&&p.est_admin&&D.ok);raw()}
 catch(e){if(e&&e.code==401){D.s=null;D.ok=0;raw();return v6login()}if(!D.ok)return v6wait()}
-if(D.ok){home();sync();setTimeout(recover,300)}else v6wait()}
+if(D.ok){await v6reconcile();home();sync();setTimeout(recover,300)}else v6wait()}
 async function v6out(){if(D.s&&D.own){try{await Promise.race([sync(),new Promise(r=>setTimeout(r,4000))])}catch(e){}v6store(D.own)}
 D.s=null;D.ok=0;D.adm=0;D.own=null;v6vide();raw();v6login()}
 window.out=v6out;
@@ -157,3 +157,16 @@ v6hook('v6inbox',()=>setTimeout(()=>v6tour('inbox',V6T.inbox),500));
 v6hook('v6admin',()=>setTimeout(()=>v6tour('admin',V6T.admin),500));
 /* l'écran « Compléter » est une fenêtre (#ak) : le guide doit pouvoir s'y afficher */
 function v6tourF(k,s){const a=$('#ak');if(a)a.id='ak2';v6tour(k,s);if(a)a.id='ak'}
+
+
+/* ---------- v6.2 : garde-fous d'isolation côté appareil ---------- */
+/* Toute connexion passe par v6auth (l'ancien formulaire du menu contournait la séparation des comptes) */
+window.auth=v6auth;
+/* Retire de cet appareil tout cahier/page déjà synchronisé que le serveur ne reconnaît pas comme appartenant à ce compte */
+async function v6reconcile(){if(!navigator.onLine||!D.s)return;
+try{await tok();const[rc,rp]=await Promise.all([api('/rest/v1/cn_cahiers?select=id'),api('/rest/v1/cn_pages?select=id')]);
+const C=new Set(rc.map(r=>r.id)),G=new Set(rp.map(r=>r.id));let n=0;const bak=JSON.stringify(D.c);
+D.c=D.c.filter(c=>{const k=c.pages.length;c.pages=c.pages.filter(p=>p.d==1||G.has(p.id));n+=k-c.pages.length;
+if(c.d!=1&&!C.has(c.id)&&!c.pages.length){n++;return false}return true});
+if(n){try{localStorage.setItem('cn-retire-'+(D.own||'x'),bak)}catch(e){}raw();toast(n+' élément(s) étranger(s) à ce compte retiré(s)')}}
+catch(e){}}
