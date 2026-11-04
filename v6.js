@@ -4,24 +4,14 @@ const V6MAX=10;let v6R=[];
 
 /* ---------- Accès : connexion + validation par l'administration ---------- */
 function v6login(msg){app.innerHTML=`<div class=top><img class=lg src=icon-192.png alt=""><h1>Cahier numérique</h1></div><div class=f><p>Connectez-vous ou créez un compte. L’accès au cahier s’ouvre après validation de votre paiement.</p><label>E-mail<input id=em type=email autocomplete=email></label><label>Mot de passe (6 caractères min.)<input id=pw type=password></label><button class=p onclick="v6auth(1)">Se connecter</button><button onclick="v6auth(0)">Créer un compte</button>${msg?'<p class=hint>'+esc(msg)+'</p>':''}</div>`}
-async function v6auth(login){const em=$('#em').value.trim().toLowerCase(),pw=$('#pw').value;if(!em||pw.length<6)return toast('E-mail et mot de passe (6 caractères min.)');
-try{const j=await api(login?'/auth/v1/token?grant_type=password':'/auth/v1/signup',{m:'POST',b:{email:em,password:pw}},0);
-if(!j.access_token)return v6login('Compte créé : confirmez votre e-mail, puis connectez-vous.');
-setS(j);D.c.forEach(c=>{c.d=1;c.u=c.u||Date.now();c.pages.forEach(p=>{p.d=1;p.u=p.u||Date.now()})});raw();v6gate()}catch(e){toast(e.msg||e.error_description||e.message||'Échec de connexion')}}
 function v6wait(){const s=D.stt=='suspendu';app.innerHTML=`<div class=top><img class=lg src=icon-192.png alt=""><h1>${s?'Compte suspendu':'Paiement en attente'}</h1></div><div class=f><p>${s?'Votre accès est suspendu. Contactez l’administration.':`Votre compte <b>${esc(D.s.email)}</b> est créé, mais votre cahier s’ouvrira après validation de votre paiement par l’administration.`}</p><div class=card><small>Paiement par Airtel Money ou Illicocash</small><h3>0999983163</h3><small>Indiquez l’adresse e-mail de votre compte avec le paiement.</small></div><button class=p onclick="v6gate()">J’ai payé · vérifier mon accès</button><button onclick="v6out()">Se déconnecter</button></div>`}
-async function v6gate(){if(!D.s)return v6login();
-app.innerHTML='<p class=hint style="padding:60px 0;text-align:center">Vérification de votre accès…</p>';
-try{await tok();const r=await api('/rest/v1/cn_profils?select=statut,est_admin'),p=r[0];D.stt=p?p.statut:'en_attente';D.ok=D.stt=='valide';D.adm=!!(p&&p.est_admin&&D.ok);raw()}
-catch(e){if(e&&e.code==401){D.s=null;D.ok=0;raw();return v6login()}if(!D.ok)return v6wait()}
-if(D.ok){home();sync();setTimeout(recover,300)}else v6wait()}
-function v6out(){D.s=null;D.ok=0;D.adm=0;raw();v6login()}
 window.out=v6out;
 window.hideSp=function(){const e=$('#sp');if(e){e.classList.add('off');setTimeout(()=>e.remove(),600);v6gate()}};
 
 /* ---------- Accueil : boutons Reçues et Administration ---------- */
 const v6home=window.home;
 window.home=function(){v6home();const t=document.querySelector('.top'),m=t&&t.querySelector('button:last-child');if(!m)return;
-m.insertAdjacentHTML('beforebegin',`<button id=v6ib onclick="v6inbox()">📥</button>`+(D.adm?'<button onclick="v6admin()">👑</button>':''));v6badge()};
+m.insertAdjacentHTML('beforebegin',`<button id=v6ib onclick="v6inbox()">📥</button>`+(D.adm?'<button onclick="v6admin()">👑</button>':''));v6badge();setTimeout(()=>v6tour('home',V6T.home),900)};
 async function v6badge(){if(!D.s||!D.ok)return;try{await tok();const r=await api('/rest/v1/cn_partages?select=id'),b=$('#v6ib');if(b&&r.length)b.textContent='📥 '+r.length}catch(e){}}
 
 /* ---------- Envoi / réception de notes ---------- */
@@ -67,7 +57,7 @@ catch(e){r.innerHTML='<p class=hint>Échec de l’IA : '+esc(String(e.message||e
 
 /* ---------- Texte uniquement : plus de PDF ---------- */
 const v6draw=window.draw;
-window.draw=function(a,b){v6draw(a,b);const tb=$('.tb');if(tb)tb.insertAdjacentHTML('afterbegin',P('v6share()','📤 Envoyer'));
+window.draw=function(a,b){v6draw(a,b);if(a)setTimeout(()=>v6tour('page',V6T.page),600);const tb=$('.tb');if(tb)tb.insertAdjacentHTML('afterbegin',P('v6share()','📤 Envoyer'));
 const f=$('#fp');if(f)f.remove();const q=document.querySelector('button[onclick*="#fp"]');if(q)q.remove()};
 const v6atts=window.atts;
 window.atts=function(){const a=pg.att;pg.att=(a||[]).filter(x=>x.k!='p');v6atts();pg.att=a};
@@ -75,3 +65,95 @@ const v6scan=window.scanUI;
 window.scanUI=function(){v6scan();const b=document.querySelector('#sc button[onclick="scanPdf()"]');if(b)b.remove()};
 window.pdf=window.scanPdf=()=>toast('Les PDF ne sont plus pris en charge : le cahier garde uniquement le texte');
 window.upl=async()=>{};
+
+
+/* =====================================================================
+   v6.1 : chaque compte a ses propres cahiers + guide de première utilisation
+   ===================================================================== */
+
+/* ---------- Espace séparé par compte sur l'appareil ---------- */
+const V6F=['c','ev','dr','bk','sort','tour'];
+const v6store=id=>{const o={};V6F.forEach(k=>o[k]=D[k]);try{localStorage.setItem('cn-user-'+id,JSON.stringify(o))}catch(e){}};
+const v6load=id=>{let o={};try{o=JSON.parse(localStorage.getItem('cn-user-'+id))||{}}catch(e){}V6F.forEach(k=>D[k]=o[k]);D.c=D.c||[];D.tour=D.tour||{};D.bk=D.bk||0};
+const v6vide=()=>{V6F.forEach(k=>D[k]=undefined);D.c=[];D.tour={};D.bk=0};
+function v6enter(id,email,after){
+ if(D.own==id)return after();
+ if(D.own){v6store(D.own);v6load(id);D.own=id;raw();return after()}
+ const n=(D.c||[]).filter(c=>!c.del).length;
+ if(!n&&!(D.ev||[]).length){v6load(id);D.own=id;raw();return after()}
+ const o=document.createElement('div');o.id='ak';
+ o.innerHTML=`<div class=scb><b>Cahiers trouvés sur cet appareil</b><p class=hint>Cet appareil contient ${n} cahier(s) créé(s) avant la séparation des comptes. Sont-ils à vous (${esc(email)}) ?</p><div class=f><button class=p id=v6y>Oui, ce sont les miens</button><button id=v6n>Non, partir d’un cahier vide</button></div></div>`;
+ document.body.appendChild(o);
+ $('#v6y').onclick=()=>{o.remove();D.own=id;D.tour=D.tour||{};D.c.forEach(c=>{c.d=1;c.u=c.u||Date.now();c.pages.forEach(p=>{p.d=1;p.u=p.u||Date.now()})});raw();after()};
+ $('#v6n').onclick=()=>{o.remove();try{localStorage.setItem('cn-user-ancien-appareil',JSON.stringify(Object.fromEntries(V6F.map(k=>[k,D[k]]))))}catch(e){}v6load(id);D.own=id;raw();after()};
+}
+async function v6auth(login){const em=$('#em').value.trim().toLowerCase(),pw=$('#pw').value;if(!em||pw.length<6)return toast('E-mail et mot de passe (6 caractères min.)');
+try{const j=await api(login?'/auth/v1/token?grant_type=password':'/auth/v1/signup',{m:'POST',b:{email:em,password:pw}},0);
+if(!j.access_token)return v6login('Compte créé : confirmez votre e-mail, puis connectez-vous.');
+setS(j);raw();v6enter(j.user.id,j.user.email,()=>{raw();v6gate()})}catch(e){toast(e.msg||e.error_description||e.message||'Échec de connexion')}}
+async function v6gate(){if(!D.s)return v6login();
+let id='';try{id=uidT()}catch(e){}
+if(id&&D.own!=id)return v6enter(id,D.s.email,v6gate);
+app.innerHTML='<p class=hint style="padding:60px 0;text-align:center">Vérification de votre accès…</p>';
+try{await tok();const r=await api('/rest/v1/cn_profils?select=statut,est_admin'),p=r[0];D.stt=p?p.statut:'en_attente';D.ok=D.stt=='valide';D.adm=!!(p&&p.est_admin&&D.ok);raw()}
+catch(e){if(e&&e.code==401){D.s=null;D.ok=0;raw();return v6login()}if(!D.ok)return v6wait()}
+if(D.ok){home();sync();setTimeout(recover,300)}else v6wait()}
+async function v6out(){if(D.s&&D.own){try{await Promise.race([sync(),new Promise(r=>setTimeout(r,4000))])}catch(e){}v6store(D.own)}
+D.s=null;D.ok=0;D.adm=0;D.own=null;v6vide();raw();v6login()}
+window.out=v6out;
+
+/* ---------- Guide automatique (une seule fois par compte et par écran) ---------- */
+const V6T={
+home:[{t:'Bienvenue dans votre cahier numérique ! Ce guide rapide explique ce que fait chaque bouton. Il ne s’affiche qu’une seule fois.'},
+{sel:'.bkr.add',t:'＋ Nouveau cahier : touchez ici pour créer le cahier d’un cours (nom, professeur, couleur). Un cahier par cours.'},
+{sel:'.sb',t:'🔍 Recherche : tapez un mot pour le retrouver dans tous vos cours et toutes vos pages.'},
+{sel:'button[onclick="agenda()"]',t:'📅 Horaires et examens : notez vos cours et examens, avec rappel dans le calendrier du téléphone.'},
+{sel:'#v6ib',t:'📥 Notes reçues : quand un collègue vous envoie une page, elle arrive ici. Vous l’enregistrez dans votre cahier en un clic.'},
+{sel:'button[onclick="v6admin()"]',t:'👑 Administration : voir les inscriptions et valider un compte après réception du paiement.'},
+{sel:'button[onclick="menu()"]',t:'⋯ Menu : sauvegarde et restauration de vos cahiers, thème clair/sombre, déconnexion.'}],
+newb:[{sel:'#a',t:'Écrivez le nom du cours (obligatoire), puis celui du professeur.'},{sel:'.sw',t:'Choisissez la couleur de la couverture de votre cahier.'},{sel:'button.p',t:'« Créer le cahier » : il apparaît aussitôt sur votre étagère.'}],
+cahier:[{sel:'.f .p',t:'＋ Nouvelle page : crée une page de notes. L’heure de début est notée automatiquement, celle de fin quand vous fermez la page.'},
+{sel:'.f button:not(.p)',t:'🎴 Réviser : les passages que vous surlignez en couleur deviennent des fiches de révision.'},
+{sel:'#cl',t:'🎙 Classeur audio : vos enregistrements de cours faits dans les pages se retrouvent ici.'},
+{sel:'header button[onclick="editB()"]',t:'✎ Modifier le nom du cours, le professeur ou la couleur.'},
+{sel:'header button[onclick^="exp"]',t:'Partager : crée un fichier de sauvegarde de ce cahier. Pour envoyer une seule page à un collègue, utilisez 📤 Envoyer dans la page.'},
+{sel:'#del',t:'🗑 Supprimer le cahier (une confirmation est demandée).'}],
+page:[{sel:'.sheet',t:'Écrivez ici : tout s’enregistre automatiquement.'},
+{sel:'button[onclick="enr()"]',t:'🔎 Compléter : cherche des infos sur Wikipédia, ou avec l’IA (10 demandes IA par jour), pour enrichir vos notes.'},
+{sel:'button[onclick="lire()"]',t:'🔊 Lire : lit la page (ou le texte sélectionné) à voix haute.'},
+{sel:'button[onclick="rec()"]',t:'🎙 Enregistrer : enregistre le cours en audio. Touchez de nouveau pour arrêter.'},
+{sel:'button[onclick="dic()"]',t:'🗣 Dictée : parlez, le texte s’écrit tout seul dans la page.'},
+{sel:'button[onclick="scanUI()"]',t:'📄 Scan : photographiez un document puis insérez-le en image ou convertissez-le en texte.'},
+{sel:'button[onclick="v6share()"]',t:'📤 Envoyer : tapez l’e-mail d’un collègue qui utilise l’application, et cette page (texte seul) arrive dans ses « Notes reçues ».'},
+{sel:'button[onclick="bro()"]',t:'✎ Brouillon : un bloc-notes rapide pour noter sans quitter la page.'},
+{sel:'.tb button.d',t:'Pastilles de couleur : colorez le texte ou surlignez. Un passage surligné devient une fiche de révision.'},
+{sel:'.eh .p',t:'Fermer : enregistre l’heure de fin et vous ramène au cahier.'}],
+menu:[{sel:'button[onclick*="sync()"]',t:'Synchroniser : envoie vos notes vers votre compte en ligne pour les retrouver partout.'},
+{sel:'button[onclick="exp()"]',t:'Sauvegarder tous mes cahiers : crée un fichier à garder (Google Drive, par exemple).'},
+{sel:'input[type=file]',t:'Restaurer : choisissez un fichier de sauvegarde pour récupérer vos cahiers.'},
+{sel:'button[onclick="th()"]',t:'Passer du thème clair au thème sombre.'}],
+agenda:[{sel:'#ea',t:'Écrivez l’intitulé, par exemple « Examen d’Introduction au droit ».'},{sel:'#eb',t:'Choisissez la date et l’heure.'},{sel:'#k1',t:'Indiquez s’il s’agit d’un cours ou d’un examen.'},{sel:'.f .p',t:'« Ajouter » : l’événement apparaît dessous. Le bouton 📲 l’ajoute ensuite au calendrier du téléphone, avec rappels.'}],
+enr:[{sel:'#eq',t:'Sujet à rechercher : rempli avec votre chapitre, modifiable.'},{sel:'button[onclick="wik()"]',t:'📚 Wikipédia + DuckDuckGo : gratuit, sans limite. Vous choisissez ce que vous gardez.'},{sel:'button[onclick="ia()"]',t:'✨ IA : complète vos notes. Chaque demande compte pour l’une de vos 10 demandes du jour (renouvelées chaque jour).'}],
+rev:[{sel:'.card p',t:'Une phrase avec un trou ＿＿＿＿ : essayez de retrouver le mot caché.'},{sel:'.card .p',t:'Affichez la réponse, puis dites « Je savais » ou « À revoir ».'}],
+inbox:[{t:'Les pages envoyées par vos collègues arrivent ici. « Enregistrer dans mon cahier » les place dans le cahier « Notes reçues » ; « Ignorer » les supprime.'}],
+admin:[{t:'Les inscriptions en attente sont en haut. Après avoir vérifié le paiement (Airtel Money / Illicocash), touchez « Valider » : le compte peut alors ouvrir son cahier. « Suspendre » bloque un compte.'}]
+};
+function v6tour(key,steps,force){D.tour=D.tour||{};if(!force&&D.tour[key])return;if(!D.s||!D.ok||$('#sp')||$('#v6t')||$('#ak'))return;
+const list=steps.filter(s=>!s.sel||document.querySelector(s.sel));if(!list.length)return;
+D.tour[key]=1;raw();let i=0;const o=document.createElement('div');o.id='v6t';o.style.cssText='position:fixed;inset:0;z-index:300';document.body.appendChild(o);
+const end=()=>o.remove(),show=()=>{const s=list[i],el=s.sel&&document.querySelector(s.sel);if(el)try{el.scrollIntoView({block:'nearest',inline:'center'})}catch(e){}
+requestAnimationFrame(()=>{const r=el&&el.getBoundingClientRect(),low=r&&r.top>innerHeight/2,pos=r?(low?'top:calc(16px + env(safe-area-inset-top,0px))':'bottom:calc(16px + env(safe-area-inset-bottom,0px))'):'top:50%;transform:translateY(-50%)';
+o.innerHTML=(r?`<div style="position:fixed;left:${r.left-6}px;top:${r.top-6}px;width:${r.width+12}px;height:${r.height+12}px;border-radius:16px;box-shadow:0 0 0 9999px #000b;border:2px solid #fff;pointer-events:none"></div>`:'<div style="position:fixed;inset:0;background:#000b"></div>')
++`<div style="position:fixed;left:12px;right:12px;max-width:440px;margin:0 auto;${pos};background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 12px 40px #0008"><p style="margin:0 0 12px;font-size:16px;line-height:1.5">${esc(s.t)}</p><div style="display:flex;gap:8px;align-items:center"><span class=hint style="flex:1">${i+1}/${list.length}</span><button id=v6s>Passer</button><button class=p id=v6n2 style="width:auto;padding:10px 18px">${i<list.length-1?'Suivant':'Compris'}</button></div></div>`;
+$('#v6s').onclick=end;$('#v6n2').onclick=()=>{if(++i>=list.length)end();else show()}})};show()}
+const v6hook=(n,f)=>{const g=window[n];window[n]=function(...a){const r=g.apply(this,a);try{f(...a)}catch(e){}return r}};
+v6hook('newB',()=>setTimeout(()=>v6tour('newb',V6T.newb),500));
+v6hook('openB',()=>setTimeout(()=>v6tour('cahier',V6T.cahier),600));
+v6hook('menu',()=>{const f=$('.f');if(f)f.insertAdjacentHTML('beforeend','<button onclick="D.tour={};raw();home()">❔ Revoir le guide</button>');setTimeout(()=>v6tour('menu',V6T.menu),500)});
+v6hook('agenda',()=>setTimeout(()=>v6tour('agenda',V6T.agenda),500));
+v6hook('enr',()=>setTimeout(()=>{if($('#ak'))$('#ak').dataset.t=1;v6tourF('enr',V6T.enr)},400));
+v6hook('rev',()=>setTimeout(()=>v6tour('rev',V6T.rev),500));
+v6hook('v6inbox',()=>setTimeout(()=>v6tour('inbox',V6T.inbox),500));
+v6hook('v6admin',()=>setTimeout(()=>v6tour('admin',V6T.admin),500));
+/* l'écran « Compléter » est une fenêtre (#ak) : le guide doit pouvoir s'y afficher */
+function v6tourF(k,s){const a=$('#ak');if(a)a.id='ak2';v6tour(k,s);if(a)a.id='ak'}
