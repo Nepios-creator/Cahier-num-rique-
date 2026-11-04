@@ -180,5 +180,6 @@ s.textContent='html,body{max-width:100%;overflow-x:clip}#app{box-sizing:border-b
 +'.shelf{display:block!important}.shelf>*{min-width:0;max-width:100%;box-sizing:border-box}'
 +'.bkr,.bi,.rs,.card,.cont,.hero,.stats,.stats>div,.top h1,.tt{min-width:0;max-width:100%;box-sizing:border-box}'
 +'.scb,#ak,#sc{max-width:100vw;box-sizing:border-box}img,audio,video{max-width:100%}.sheet img{max-width:100%;height:auto}'
-+'.top{flex-wrap:nowrap}.top h1{overflow-wrap:anywhere}';
++'.top{flex-wrap:wrap;gap:10px 12px;align-items:center}.top h1{flex:1 1 calc(100% - 70px);font-size:25px;line-height:1.1;overflow-wrap:normal;word-break:normal;hyphens:none}'
++'.top button{flex:1 1 0;min-width:0;padding:10px 0;font-size:18px}';
 document.head.appendChild(s)})();
