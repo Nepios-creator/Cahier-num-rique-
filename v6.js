@@ -252,3 +252,12 @@ window.cmd=function(c,v){const was=c=='insertOrderedList'&&document.queryCommand
 window.v65num=function(){const ol=v65ol();if(!ol)return toast('Placez le curseur dans une liste numérotée');if(!v65prev(ol))return toast('C’est la première liste numérotée de la page');v65ask(ol)};
 const v65draw=window.draw;
 window.draw=function(a,b){v65draw(a,b);const x=document.querySelector('.tb button[data-fc="insertOrderedList"]');if(x)x.insertAdjacentHTML('afterend',P('v65num()','N°'))};
+/* v6.7 : leçon complète directement disponible, fenêtre qui reste ouverte */
+window.saveC=function(t,h,k){if(!h)return toast('Rien à enregistrer');pg.cpl=pg.cpl||[];if(pg.cpl.some(x=>x.h==h))return toast('Déjà enregistré');pg.cpl.push({id:uid(),t:(t||'Complément').slice(0,80),h,k,d:Date.now()});save();cpr();toast('Enregistré dans Notes complémentaires')};
+const v67enr=window.enr;
+window.enr=function(){v67enr();const b=document.querySelector('#ak button[onclick="ia()"]');if(b)b.insertAdjacentHTML('afterend','<button class=p onclick="lecon()">📘 Leçon complète détaillée (1 demande)</button>')};
+window.lecon=async function(){const r=$('#er');if(!r)return;r.innerHTML='<p class=hint>L’IA rédige votre leçon détaillée… (30 à 90 secondes)</p>';
+try{const j=await v6call({mode:'lecon',q:($('#eq')||{}).value||'',cours:cur.cours,chap:pg.chap||'',sujet:pg.sujet||'',notes:txt($('#ed').innerHTML).slice(0,8000)});
+if(j.error)return r.innerHTML='<p class=hint>'+esc(v6err(j))+'</p>';
+LH=clean(j.text||'');r.innerHTML=`<div class=card style="font-size:15px;line-height:1.7">${LH}</div>`+v6left(j)+`<div class=f><button class=p onclick="saveC('Leçon : '+$('#eq').value,LH,'lecon')">💾 Enregistrer la leçon dans Notes complémentaires</button></div>`}
+catch(e){r.innerHTML='<p class=hint>Échec de l’IA : '+esc(String(e.message||e))+'</p>'}};
