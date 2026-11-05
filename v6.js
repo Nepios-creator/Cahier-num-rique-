@@ -236,3 +236,19 @@ async function v64drSync(){if(!D.s||!D.ok||v64busy||!navigator.onLine)return;v64
   raw()}catch(e){}finally{v64busy=0}}
 const v64sync=window.sync;
 window.sync=async function(){await v64sync();await v64drSync()};
+/* v6.6 : numérotation continue ou nouvelle, au choix */
+const v65ol=()=>{const s=getSelection(),e=$('#ed');if(!e||!s.rangeCount)return null;let n=s.anchorNode;while(n&&n!==e){if(n.nodeType==1&&n.tagName=='OL')return n;n=n.parentNode}return null};
+const v65prev=ol=>{const L=[...$('#ed').querySelectorAll('ol')],i=L.indexOf(ol);return i>0?L[i-1]:null};
+const v65next=ol=>{const p=v65prev(ol);return p?(parseInt(p.getAttribute('start'))||1)+p.children.length:1};
+function v65ask(ol){const o=document.createElement('div');o.id='ak';const n=v65next(ol);
+ o.innerHTML=`<div class=scb><b>Numérotation</b><p class=hint>Il y a déjà une liste numérotée plus haut dans cette page.</p><div class=f><button class=p id=v65a>Continuer la numérotation (à partir de ${n})</button><button class=p id=v65b>Recommencer à 1</button></div></div>`;
+ document.body.appendChild(o);o.onclick=e=>{if(e.target==o)o.remove()};
+ const fin=()=>{o.remove();pg.html=$('#ed').innerHTML;save()};
+ $('#v65a').onclick=()=>{ol.setAttribute('start',n);fin()};
+ $('#v65b').onclick=()=>{ol.removeAttribute('start');fin()}}
+const v65cmd=window.cmd;
+window.cmd=function(c,v){const was=c=='insertOrderedList'&&document.queryCommandState(c);const r=v65cmd(c,v);
+ if(c=='insertOrderedList'&&!was){const ol=v65ol();if(ol&&v65prev(ol))v65ask(ol)}return r};
+window.v65num=function(){const ol=v65ol();if(!ol)return toast('Placez le curseur dans une liste numérotée');if(!v65prev(ol))return toast('C’est la première liste numérotée de la page');v65ask(ol)};
+const v65draw=window.draw;
+window.draw=function(a,b){v65draw(a,b);const x=document.querySelector('.tb button[data-fc="insertOrderedList"]');if(x)x.insertAdjacentHTML('afterend',P('v65num()','N°'))};
