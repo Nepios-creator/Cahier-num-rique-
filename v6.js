@@ -217,3 +217,22 @@ function v64fmt(){const e=$('#ed'),s=getSelection();if(!e||!e.isContentEditable|
 document.addEventListener('selectionchange',v64fmt);
 const v64cmd=window.cmd;
 window.cmd=function(c,v){const r=v64cmd(c,v);v64fmt();return r};
+/* v6.5 : brouillons synchronisés avec Supabase */
+let v64t;
+const v64touch=()=>{pg.dra=Date.now();pg.drd=1;raw();clearTimeout(v64t);v64t=setTimeout(v64drSync,3000)};
+const v64draw2=window.draw;
+window.draw=function(a,b){v64draw2(a,b);
+ const t=$('#dt');if(t)t.oninput=function(){pg.dr=this.value;v64touch()};
+ const v=document.querySelector('#dr .drh span button:nth-child(2)');if(v)v.onclick=()=>{pg.dr='';const t2=$('#dt');if(t2)t2.value='';v64touch()}};
+let v64busy=0;
+async function v64drSync(){if(!D.s||!D.ok||v64busy||!navigator.onLine)return;v64busy=1;
+ try{await tok();const rows=await api('/rest/v1/cn_pages?select=id,dr,dr_at'),R=new Map(rows.map(r=>[r.id,r]));
+  for(const c of D.c)for(const p of c.pages){const r=R.get(p.id);if(!r)continue;
+   if(p.drd&&(p.dra||0)>=(r.dr_at||0)){const a=p.dra||Date.now();
+    await api('/rest/v1/cn_pages?id=eq.'+encodeURIComponent(p.id),{m:'PATCH',h:{Prefer:'return=minimal'},b:{dr:p.dr||'',dr_at:a}});
+    if((p.dra||0)==a)p.drd=0}
+   else if((r.dr_at||0)>(p.dra||0)){p.dr=r.dr;p.dra=r.dr_at;p.drd=0;
+    const t=$('#dt');if(t&&pg&&pg.id==p.id&&document.activeElement!==t)t.value=p.dr}}
+  raw()}catch(e){}finally{v64busy=0}}
+const v64sync=window.sync;
+window.sync=async function(){await v64sync();await v64drSync()};
