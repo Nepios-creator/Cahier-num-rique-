@@ -50,7 +50,7 @@ const v8L={};
 function v8lib(k){if(v8L[k])return v8L[k];
  const U={pdf:['https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js','https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'],
   word:['https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js','https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js']}[k];
- return v8L[k]=(async()=>{for(const u of U){try{await new Promise((r,j)=>{const s=document.createElement('script');s.src=u;s.onload=r;s.onerror=j;document.head.appendChild(s)});
+ return v8L[k]=(async()=>{for(const u of U){try{await new Promise((r,j)=>{const s=document.createElement('script'),to=setTimeout(()=>{s.remove();j(new Error('to'))},15000);s.src=u;s.onload=()=>{clearTimeout(to);r()};s.onerror=()=>{clearTimeout(to);j(new Error('err'))};document.head.appendChild(s)});
   if(k=='pdf')pdfjsLib.GlobalWorkerOptions.workerSrc=u.replace('pdf.min.js','pdf.worker.min.js');return}catch(e){}}
   delete v8L[k];throw new Error('lib')})()}
 
@@ -63,11 +63,11 @@ async function v8open(id,play){const x=((cur&&cur.docs)||[]).find(d=>d.id==id);i
  v8close();const my=V8.vid;V8.x=x;V8.kind=x.t;V8.ready=0;V8.pc={};V8.np=1;V8.p=1;V8.k=0;V8.sp=0;V8.said=0;
  const o=document.createElement('div');o.id='v8v';
  o.style.cssText='position:fixed;inset:0;z-index:250;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);padding:env(safe-area-inset-top,0px) 12px env(safe-area-inset-bottom,0px);box-sizing:border-box';
- o.innerHTML=`<div class=eh><button onclick="v8close()">✕</button><div class=tt><b>${esc(x.n)}</b><small id=v8s>Chargement…</small></div></div><div class=tb><button onclick="v8play()"><span id=v8pl>🔊 Écouter</span></button><button onclick="v8stop()">⏹</button><button id=v8r onclick="v8spd()">Voix ${V8N[V8.r]}</button></div><div class=sheet id=v8b style="padding:8px;margin-bottom:10px"></div>`;
+ o.innerHTML=`<div class=eh><button onclick="v8close()">✕</button><div class=tt><b>${esc(x.n)}</b><small id=v8s>Chargement…</small></div></div><div class=tb><button onclick="v8play()"><span id=v8pl>🔊 Écouter</span></button><button onclick="v8stop()">⏹</button><button id=v8r onclick="v8spd()">Voix ${V8N[V8.r]}</button></div><div class=sheet id=v8b style="padding:8px 14px;margin-bottom:10px"><p style="opacity:.6">Chargement du document…</p></div>`;
  document.body.appendChild(o);
  try{if(x.t=='pdf')await v8pdf(b,my);else await v8word(b,my);
   if(my!=V8.vid)return;V8.ready=1;if(play)v8play()}
- catch(e){if(my!=V8.vid)return;const s=$('#v8s');if(s)s.textContent=e&&e.message=='pwd'?'PDF protégé par mot de passe : non pris en charge':e&&e.message=='lib'?'Connexion nécessaire la première fois pour charger le lecteur':'Impossible d’ouvrir ce fichier (fichier abîmé ?)'}}
+ catch(e){if(my!=V8.vid)return;const m=e&&e.message=='pwd'?'PDF protégé par mot de passe : non pris en charge.':e&&e.message=='lib'?'Connexion nécessaire la première fois pour charger le lecteur de PDF.':'Impossible d’ouvrir ce fichier (fichier abîmé ?).',s=$('#v8s'),x=$('#v8b');if(s)s.textContent='Erreur';if(x)x.innerHTML='<p>'+m+'</p>'}}
 
 function v8san(h){const d=new DOMParser().parseFromString('<body>'+h+'</body>','text/html');
  d.body.querySelectorAll('script,style,iframe,object,embed,link,meta,form,input,button,svg,video,audio').forEach(e=>e.remove());
@@ -78,7 +78,7 @@ function v8san(h){const d=new DOMParser().parseFromString('<body>'+h+'</body>','
  return d.body.innerHTML}
 
 /* PDF : pages dessinées à la demande (légères pour la mémoire du téléphone) */
-async function v8pdf(b,my){await v8lib('pdf');if(my!=V8.vid)return;
+async function v8pdf(b,my){$('#v8s').textContent='Chargement du lecteur PDF…';await v8lib('pdf');if(my!=V8.vid)return;
  const buf=await b.arrayBuffer();let pdf;
  try{pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise}catch(e){throw (e&&e.name=='PasswordException')?new Error('pwd'):e}
  if(my!=V8.vid){try{pdf.destroy()}catch(e){}return}
@@ -98,10 +98,63 @@ async function v8rend(w){if(w.dataset.r||w.dataset.b||!V8.pdf)return;w.dataset.b
  catch(e){}finally{delete w.dataset.b}}
 function v8free(w){if(!w.dataset.r)return;w.innerHTML='';delete w.dataset.r}
 
-/* Word (.docx) : converti en page lisible */
-async function v8word(b,my){await v8lib('word');if(my!=V8.vid)return;
- const r=await mammoth.convertToHtml({arrayBuffer:await b.arrayBuffer()});if(my!=V8.vid)return;
- const box=$('#v8b');box.style.padding='18px 20px';box.innerHTML=v8san(r.value||'')||'<p>(Document vide)</p>';
+/* Word (.docx) : lu directement sur le téléphone (aucune connexion nécessaire) */
+const V8W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const v8inflate=async d=>new Uint8Array(await new Response(new Blob([d]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+async function v8unzip(buf){const u=new Uint8Array(buf),dv=new DataView(buf);let e=-1;
+ for(let i=u.length-22;i>=Math.max(0,u.length-65600);i--)if(dv.getUint32(i,true)==0x06054b50){e=i;break}
+ if(e<0)throw new Error('zip');
+ const n=dv.getUint16(e+10,true),dec=new TextDecoder(),F={};let p=dv.getUint32(e+16,true);
+ for(let k=0;k<n;k++){if(dv.getUint32(p,true)!=0x02014b50)throw new Error('zip');
+  const meth=dv.getUint16(p+10,true),cs=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true),name=dec.decode(u.subarray(p+46,p+46+nl));
+  p+=46+nl+el+cl;if(!/^word\/(document|styles|numbering)\.xml$/.test(name))continue;
+  const ds=lo+30+dv.getUint16(lo+26,true)+dv.getUint16(lo+28,true),raw=u.subarray(ds,ds+cs);
+  F[name]=dec.decode(meth==0?raw:await v8inflate(raw))}
+ return F}
+async function v8docx(buf){const F=await v8unzip(buf);if(!F['word/document.xml'])throw new Error('nodoc');
+ const X=s=>new DOMParser().parseFromString(s,'application/xml'),kids=(el,n)=>[...el.children].filter(c=>c.localName==n),
+  attr=(el,n)=>el.getAttributeNS(V8W,n)||el.getAttribute('w:'+n)||'',
+  tx=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),
+  on=el=>{if(!el)return false;const v=attr(el,'val');return v!='0'&&v!='false'&&v!='none'};
+ const SN={},NF={};
+ if(F['word/styles.xml'])for(const s of X(F['word/styles.xml']).getElementsByTagNameNS(V8W,'style')){const nm=kids(s,'name')[0];SN[attr(s,'styleId')]=nm?attr(nm,'val'):''}
+ if(F['word/numbering.xml']){const nd=X(F['word/numbering.xml']),A={};
+  for(const a of nd.getElementsByTagNameNS(V8W,'abstractNum')){const l=kids(a,'lvl')[0],f=l&&kids(l,'numFmt')[0];A[attr(a,'abstractNumId')]=f?attr(f,'val'):'bullet'}
+  for(const m of nd.getElementsByTagNameNS(V8W,'num')){const an=kids(m,'abstractNumId')[0];NF[attr(m,'numId')]=an?A[attr(an,'val')]:'bullet'}}
+ function runs(el){let h='';for(const c of el.children){const n=c.localName;
+  if(n=='r'){let t='';for(const x of c.children){const m=x.localName;if(m=='t')t+=tx(x.textContent);else if(m=='tab')t+='&emsp;';else if(m=='br'||m=='cr')t+='<br>';else if(m=='noBreakHyphen')t+='-'}
+   if(!t)continue;const pr=kids(c,'rPr')[0];
+   if(pr){if(on(kids(pr,'b')[0]))t='<strong>'+t+'</strong>';if(on(kids(pr,'i')[0]))t='<em>'+t+'</em>';if(on(kids(pr,'u')[0]))t='<u>'+t+'</u>';if(on(kids(pr,'strike')[0]))t='<s>'+t+'</s>'}
+   h+=t}
+  else if(n=='hyperlink'||n=='ins'||n=='smartTag'||n=='fldSimple')h+=runs(c);
+  else if(n=='sdt'){const sc=kids(c,'sdtContent')[0];if(sc)h+=runs(sc)}}
+  return h}
+ function para(p){const pr=kids(p,'pPr')[0];let l=0,ls=null;
+  if(pr){const ps=kids(pr,'pStyle')[0];
+   if(ps){const id=attr(ps,'val'),nm=SN[id]||id,m=/^(heading|titre)\s*(\d)/i.exec(nm)||/^(heading|titre)\s*(\d)/i.exec(id);if(m)l=Math.min(6,+m[2]);else if(/^(title|titre)$/i.test(nm))l=1}
+   const np=kids(pr,'numPr')[0];
+   if(np){const ni=kids(np,'numId')[0],id=ni?attr(ni,'val'):'';if(id&&id!='0'){const f=NF[id];ls=!!(f&&f!='bullet'&&f!='none')}}}
+  return{h:runs(p),l,ls}}
+ function blocks(el){const o=[];for(const c of el.children){const n=c.localName;
+  if(n=='p')o.push(para(c));else if(n=='tbl')o.push({k:'t',h:table(c)});else if(n=='sdt'){const sc=kids(c,'sdtContent')[0];if(sc)o.push(...blocks(sc))}}return o}
+ function table(t){let h='<table>';for(const r of kids(t,'tr')){h+='<tr>';for(const c of kids(r,'tc'))h+='<td>'+render(blocks(c))+'</td>';h+='</tr>'}return h+'</table>'}
+ function render(bl){let h='',op=null;const close=()=>{if(op!==null){h+=op?'</ol>':'</ul>';op=null}};
+  for(const b of bl){if(b.k=='t'){close();h+=b.h;continue}
+   const empty=!b.h.replace(/<[^>]+>|&emsp;/g,'').trim();
+   if(b.ls!==null){if(empty)continue;if(op!==b.ls){close();op=b.ls;h+=op?'<ol>':'<ul>'}h+='<li>'+b.h+'</li>';continue}
+   close();if(empty)continue;h+=b.l?'<h'+b.l+'>'+b.h+'</h'+b.l+'>':'<p>'+b.h+'</p>'}
+  close();return h}
+ const body=X(F['word/document.xml']).getElementsByTagNameNS(V8W,'body')[0];if(!body)throw new Error('nodoc');
+ return render(blocks(body))}
+
+async function v8word(b,my){const buf=await b.arrayBuffer();let h='';
+ try{h=await v8docx(buf)}catch(e){h=null}
+ if(my!=V8.vid)return;
+ if(!h||!h.trim()){$('#v8s').textContent='Chargement du lecteur Word…';
+  try{await v8lib('word');if(my!=V8.vid)return;const r=await mammoth.convertToHtml({arrayBuffer:buf});h=v8san(r.value||'')}
+  catch(e){if(my!=V8.vid)return;if(h===null)throw e;h=''}}
+ if(my!=V8.vid)return;
+ const box=$('#v8b');box.style.padding='18px 20px';box.innerHTML=h&&h.trim()?h:'<p>Aucun texte lisible dans ce document.</p>';
  const sel='h1,h2,h3,h4,h5,h6,p,li,td,th,blockquote',T=[];
  [...box.querySelectorAll(sel)].filter(e=>!e.querySelector(sel)).forEach(e=>{let s=(e.textContent||'').replace(/\s+/g,' ').trim();if(!s)return;if(!/[.!?…:;]$/.test(s))s+='.';v8chunks(s).forEach(x=>T.push(x))});
  if(!T.length)v8chunks(box.textContent||'').forEach(x=>T.push(x));
