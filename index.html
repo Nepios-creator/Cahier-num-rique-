@@ -259,4 +259,4 @@ if(j.error=='no_key')return r.innerHTML='<p class=hint>L’IA n’est pas encore
 AIH=clean(j.text||'');r.innerHTML=(j.web?'':'<p class=hint>Aucune source trouvée sur le web : réponse basée sur les connaissances de l’IA, à vérifier.</p>')+`<div class=card style="font-size:15px;line-height:1.6">${AIH}</div><div class=f><button class=p onclick="saveC($('#eq').value||'Compléments IA',AIH,'ia')">💾 Enregistrer dans Notes complémentaires</button><button class=p onclick=lecon()>📘 Obtenir la leçon complète sur ce sujet</button></div>`}catch(e){r.innerHTML='<p class=hint>Échec de l’IA : '+esc(String(e.message||e))+'</p>'}}
 function hideSp(){const e=$('#sp');if(e){e.classList.add('off');setTimeout(()=>e.remove(),600);setTimeout(recover,700)}}
 home();sync();
-</script><script src="v6.js"></script></body></html>
+<script src="v6.js"></script><script src="v7.js"></script></body></html>
