@@ -138,8 +138,14 @@ function v10setFont(i){const e=$('#ed');if(!e||!pg)return;const f=V10F[i],css=f[
    (elle ne revient donc pas à la prochaine synchronisation).
    ===================================================================== */
 function v10delP(id,fromPage){const p=cur&&cur.pages.find(x=>x.id==id);if(!p)return;const n=cur.pages.indexOf(p)+1;
- modal(`<b>Supprimer la page ${n} ?</b><p class=hint>« ${esc(p.chap||'Sans chapitre')}${p.sujet?' — '+esc(p.sujet):''} » sera supprimée définitivement, avec ses enregistrements audio et ses notes complémentaires. Cette action est irréversible.</p>`,()=>{v10doDel(id,fromPage)});
- const b=$('#eo');if(b)b.textContent='Supprimer'}
+ const nom='« '+esc(p.chap||'Sans chapitre')+(p.sujet?' — '+esc(p.sujet):'')+' »';
+ /* 1re confirmation */
+ modal(`<b>Supprimer la page ${n} ?</b><p class=hint>${nom} sera supprimée avec ses enregistrements audio et ses notes complémentaires.</p>`,()=>{
+  /* 2e confirmation (ouverte une fois la 1re fermée) */
+  setTimeout(()=>{
+   modal(`<b>⚠️ Dernière confirmation</b><p class=hint>Supprimer définitivement la page ${n} ${nom} ? Cette action est <b>irréversible</b> : la page ne pourra pas être récupérée.</p>`,()=>{v10doDel(id,fromPage)});
+   const b2=$('#eo');if(b2)b2.textContent='Oui, supprimer'},0)});
+ const b=$('#eo');if(b)b.textContent='Continuer'}
 
 function v10doDel(id,fromPage){const p=cur&&cur.pages.find(x=>x.id==id);if(!p)return;
  try{stopL();if(fromPage){if(mr&&mr.state=='recording')mr.stop();dOn=0;if(sr)sr.stop();if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}}catch(e){}
@@ -163,9 +169,7 @@ window.sync=async function(){try{await v10flush()}catch(e){}await v10prevSync();
 /* Boutons : liste des pages du cahier + barre d'outils de la page */
 const v10openB=window.openB;
 window.openB=function(){const r=v10openB.apply(this,arguments);
- try{document.querySelectorAll('.rs[onclick^="openP("]').forEach(e=>{const m=/openP\('([^']+)'\)/.exec(e.getAttribute('onclick')||'');
-   if(m)e.insertAdjacentHTML('beforeend',`<span><button class=ch onclick="event.stopPropagation();v10delP('${m[1]}')">🗑 Supprimer cette page</button></span>`)});
-  const f=document.querySelector('.f');if(f&&!$('#v10gd'))f.insertAdjacentHTML('beforeend','<button id=v10gd onclick="v10drive()">☁️ Sauvegarder dans Google Drive</button>')}catch(e){}
+ try{const f=document.querySelector('.f');if(f&&!$('#v10gd'))f.insertAdjacentHTML('beforeend','<button id=v10gd onclick="v10drive()">☁️ Sauvegarder dans Google Drive</button>')}catch(e){}
  return r};
 const v10draw=window.draw;
 window.draw=function(a,b){v10draw(a,b);const tb=$('.tb');
