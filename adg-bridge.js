@@ -59,7 +59,7 @@
   function render() {
     var l = getLink(); if (l) return waitScreen(l);
     app.innerHTML = head('Activez votre Cahier') + '<div class=f><div class=card id=adgprice>' + priceHtml() + '</div>' +
-      '<p>Compte : <b>' + E(email()) + '</b><br>Comment souhaitez-vous payer ?</p>' +
+      '<p>Compte : <b>' + E(email()) + '</b><br>Comment souhaitez-vous payer ? <small style=\"opacity:.5\">(pont v2)</small></p>' +
       '<button class=p onclick="adgOpt(1)">1. Avec un ambassadeur</button><button class=p style="margin-top:8px" onclick="adgOpt(2)">2. Sans ambassadeur</button>' +
       '<button onclick="v6out()">Se déconnecter</button></div>';
     loadInfo();
