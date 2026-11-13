@@ -46,7 +46,7 @@ function v13katex(){if(window.renderMathInElement)return Promise.resolve();
 async function v13math(el){try{await v13katex();renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false},{left:'$',right:'$',display:false}],throwOnError:false})}catch(e){}}
 
 /* Markdown minimal et sûr (tout est échappé avant mise en forme ; les formules sont protégées) */
-function v13md(t){const M=[];t=String(t||'').replace(/\$\$[\s\S]+?\$\$|\$[^\n$]+?\$/g,m=>{M.push(m);return'\u0001'+(M.length-1)+'\u0001'});
+function v13md(t){const M=[];if(Array.isArray(t))t=t.map(x=>typeof x=='string'?x:(x&&x.text)||'').join('');t=String(t||'').replace(/\$\$[\s\S]+?\$\$|\$[^\n$]+?\$/g,m=>{M.push(m);return'\u0001'+(M.length-1)+'\u0001'});
  const inl=s=>E(s).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<i>$2</i>');
  let h='',ul=0,ol=0;const cl=()=>{if(ul){h+='</ul>';ul=0}if(ol){h+='</ol>';ol=0}};
  for(const L of t.split('\n')){let m;
