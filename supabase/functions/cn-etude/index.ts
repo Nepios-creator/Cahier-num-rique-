@@ -27,6 +27,23 @@ Mélange tous les types. Le total des points doit faire exactement 20.`;
 
 const clip = (s: unknown) => String(s ?? "").slice(0, MAX);
 
+// Une réponse unique de 16 à 20 questions est coupée par la limite de longueur : l'examen blanc est donc généré
+// en deux parties parallèles (A : questions courtes, B : questions longues), puis fusionné.
+async function genPart(want: string, content: string, prefix: string, max: number) {
+  let last: unknown;
+  for (let t = 0; t < 2; t++) {
+    try {
+      const o = parseJson(await mistral(EXAM_SYS,
+        `${want}\nIdentifiants des questions : ${prefix}1, ${prefix}2, …\n\nCONTENU DU CAHIER :\n${content}`, { json: true, max }));
+      const map: Record<string, string> = {};
+      const questions = (o.questions || []).map((q: any, n: number) => { const id = prefix + (n + 1); map[String(q.id ?? "")] = id; return { ...q, id }; });
+      const answer_key = (o.answer_key || []).map((k: any) => ({ ...k, id: map[String(k.id)] ?? String(k.id) }));
+      return { title: o.title, questions, answer_key };
+    } catch (e) { last = e; if (String((e as any)?.message) === "no_key") throw e; }
+  }
+  throw last;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
