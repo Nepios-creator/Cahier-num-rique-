@@ -52,7 +52,12 @@ export async function mistral(system: string, user: string, opts: { json?: boole
     });
     if (r.ok) {
       const j = await r.json();
-      return String(j.choices?.[0]?.message?.content ?? "");
+      // Mistral peut renvoyer le contenu en blocs [{type:"text",text:"…"}] : on les met bout à bout.
+      const c = j.choices?.[0]?.message?.content;
+      if (Array.isArray(c)) {
+        return c.map((x: any) => (typeof x === "string" ? x : String(x?.text ?? x?.content ?? ""))).join("");
+      }
+      return String(c ?? "");
     }
     last = `mistral_${r.status}`;
     if (r.status !== 429 && r.status < 500) break;
