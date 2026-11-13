@@ -9,8 +9,16 @@ window.V13=V13;
 
 /* ---------- Style ---------- */
 (()=>{const s=document.createElement('style');s.textContent=`
-#v13o{position:fixed;inset:0;z-index:150;background:#000a;display:flex}
-#v13o .scb{display:flex;flex-direction:column;max-height:100%;overflow:auto}
+#v13o{position:fixed;inset:0;z-index:150;background:var(--bg);display:block;overflow:hidden}
+#v13o .scb{position:absolute;inset:0;width:100%;max-width:none;height:100%;max-height:none;margin:0;border-radius:0;box-shadow:none;background:var(--bg);display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 40px}
+#v13o .drh{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line);font-size:18px}
+#v13o .drh button{width:auto;flex:none;padding:8px 14px}
+#v13b{width:100%;max-width:860px;margin:0 auto;padding:12px 16px;box-sizing:border-box}
+#v13b .v13md{font-size:17px;line-height:1.75;overflow-wrap:anywhere}
+#v13b .v13md p{margin:.6em 0}#v13b .v13md ul,#v13b .v13md ol{padding-left:22px}
+#v13b .sheet{background:var(--card);border-radius:14px;padding:14px 18px!important}
+#v13b .v13rb{position:sticky;top:58px;z-index:4;background:var(--bg);padding:6px 0}
+.katex-display{overflow-x:auto;overflow-y:hidden}
 .v13s{padding:8px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);margin:6px 0;font-size:14px}
 .v13t{display:flex;gap:6px;margin:8px 0}.v13t button{flex:1}.v13t .on{background:var(--acc);color:#fff}
 .v13q{padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin:10px 0;background:var(--card)}
