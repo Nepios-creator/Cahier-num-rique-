@@ -51,6 +51,7 @@ $('#inst').onclick=async()=>{if(!dp)return;dp.prompt();const r=await dp.userChoi
 addEventListener('appinstalled',()=>{$('#inst').hidden=true;$('#gen').hidden=true;$('#ios').hidden=true;$('#done').hidden=false;$('#open').textContent='Ouvrir le cahier'});
 $('#copy').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$('#copy').textContent='✅ Lien copié'}catch(e){prompt('Copiez ce lien :',location.href)}};
 if(inapp)$('#inapp').hidden=false;
+else if(/HuaweiBrowser|HMSCore|HUAWEI|HONOR/i.test(ua)&&!ios){$('#hw').hidden=false}
 else if(ios)$('#ios').hidden=false;
 else setTimeout(()=>{if(!got)$('#gen').hidden=false},1500);
 </script></body></html>
