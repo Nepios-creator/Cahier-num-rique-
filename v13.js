@@ -27,7 +27,7 @@ window.V13=V13;
 .v13md h1,.v13md h2,.v13md h3{margin:.9em 0 .3em}.v13md h1{font-size:21px}.v13md h2{font-size:18px}.v13md h3{font-size:16px}
 .v13md li{margin:2px 0}.v13md code{background:var(--line);padding:0 4px;border-radius:4px}
 .v13sc{font-size:44px;font-weight:700;text-align:center;margin:6px 0}
-.v13tm{position:sticky;top:0;background:var(--bg);padding:6px 0;font-weight:700;z-index:2}
+.v13tm{position:sticky;top:58px;background:var(--bg);padding:6px 0;font-weight:700;z-index:2}
 .v13ok{color:#16a34a}.v13ko{color:#dc2626}
 `;document.head.appendChild(s)})();
 
