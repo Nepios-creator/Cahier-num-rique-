@@ -141,7 +141,7 @@ admin:[{t:'Les inscriptions en attente sont en haut. Après avoir vérifié le p
 };
 function v6tour(key,steps,force){D.tour=D.tour||{};if(!force&&D.tour[key])return;if(!D.s||!D.ok||$('#sp')||$('#v6t')||$('#ak'))return;
 const list=steps.filter(s=>!s.sel||document.querySelector(s.sel));if(!list.length)return;
-D.tour[key]=1;raw();let i=0;const o=document.createElement('div');o.id='v6t';o.style.cssText='position:fixed;inset:0;z-index:300';document.body.appendChild(o);
+D.tour[key]=1;raw();let i=0;const o=document.createElement('div');o.id='v6t';o.style.cssText='position:fixed;top:0;right:0;bottom:0;left:0;z-index:300';document.body.appendChild(o);
 const end=()=>o.remove(),show=()=>{const s=list[i],el=s.sel&&document.querySelector(s.sel);if(el)try{el.scrollIntoView({block:'nearest',inline:'center'})}catch(e){}
 requestAnimationFrame(()=>{const r=el&&el.getBoundingClientRect(),low=r&&r.top>innerHeight/2,pos=r?(low?'top:calc(16px + env(safe-area-inset-top,0px))':'bottom:calc(16px + env(safe-area-inset-bottom,0px))'):'top:50%;transform:translateY(-50%)';
 o.innerHTML=(r?`<div style="position:fixed;left:${r.left-6}px;top:${r.top-6}px;width:${r.width+12}px;height:${r.height+12}px;border-radius:16px;box-shadow:0 0 0 9999px #000b;border:2px solid #fff;pointer-events:none"></div>`:'<div style="position:fixed;inset:0;background:#000b"></div>')
