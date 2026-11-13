@@ -135,7 +135,7 @@ function v13draw(){const b=$('#v13b');if(!b)return;const sc=V13.screen;
     return`<div class=v13q><b>${i+1}. <span class="${p.obtained>=p.points?'v13ok':'v13ko'}">${p.obtained} / ${p.points}</span></b><div class=v13md>${v13md(q.text||'')}</div><p><i>Votre réponse :</i> ${E(ga(p,q,(R.answers||{})[p.id]))}</p><div class=v13md><b>Corrigé :</b> ${v13md(String(ca??''))}</div>${p.comment?`<div class=v13md><b>Commentaire :</b> ${v13md(p.comment)}</div>`:''}${p.explanation?`<div class=v13md><b>Explication :</b> ${v13md(p.explanation)}</div>`:''}</div>`}).join('');
   v13math(b)}}
 
-const ga=(p,q,a)=>a===undefined||a===''?'(sans réponse)':p.type=='qcm'&&q.choices?String(q.choices[+a]??a):p.type=='vrai_faux'?(String(a)=='true'?'Vrai':'Faux'):String(a).slice(0,1500);
+const ga=(p,q,a)=>a===undefined||a===''?'(sans réponse)':p.type=='qcm'&&q.choices?String(q.choices[+a]!=null?q.choices[+a]:a):p.type=='vrai_faux'?(String(a)=='true'?'Vrai':'Faux'):String(a).slice(0,1500);
 /* ---------- Actions ---------- */
 async function v13act(a,d){
  if(a=='close')return v13close();
