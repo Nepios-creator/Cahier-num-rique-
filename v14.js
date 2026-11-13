@@ -6,7 +6,7 @@
 (()=>{
 const E=esc;
 (()=>{const s=document.createElement('style');s.textContent=`
-#v14o{position:fixed;inset:0;z-index:160;background:#000a;display:flex;align-items:flex-end}
+#v14o{position:fixed;top:0;right:0;bottom:0;left:0;z-index:160;background:#000a;display:flex;align-items:flex-end}
 #v14o .v14b{background:var(--bg);color:var(--ink);width:100%;max-height:80%;overflow:auto;border-radius:16px 16px 0 0;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
 .v14g{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.v14g button{min-width:40px;padding:8px 6px;font-size:18px}
 .v14t{display:flex;gap:6px;overflow-x:auto}.v14t button{white-space:nowrap}.v14t .on{background:var(--acc);color:#fff}

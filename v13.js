@@ -9,8 +9,15 @@ window.V13=V13;
 
 /* ---------- Style ---------- */
 (()=>{const s=document.createElement('style');s.textContent=`
-#v13o{position:fixed;inset:0;z-index:150;background:#000a;display:flex}
-#v13o .scb{display:flex;flex-direction:column;max-height:100%;overflow:auto}
+#v13o{position:fixed;top:0;right:0;bottom:0;left:0;z-index:150;background:var(--bg);overflow:hidden}
+#v13o .scb{position:absolute;top:0;right:0;bottom:0;left:0;width:auto;max-width:none;height:auto;max-height:none;margin:0;border:0;border-radius:0;box-shadow:none;background:var(--bg);display:block;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 0 60px;box-sizing:border-box}
+#v13o .drh{position:sticky;top:0;z-index:5;background:var(--bg);min-height:56px;box-sizing:border-box;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);font-size:18px}
+#v13o .drh button{width:auto;padding:8px 14px}
+#v13b{width:100%;max-width:860px;margin:0 auto;padding:12px 16px;box-sizing:border-box}
+#v13b .v13md{overflow-wrap:anywhere}
+#v13b .sheet{flex:none;overflow:visible;padding:14px 18px}
+#v13b .v13rb{position:sticky;top:56px;z-index:4;background:var(--bg);padding:6px 0}
+.katex-display{overflow-x:auto;overflow-y:hidden}
 .v13s{padding:8px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);margin:6px 0;font-size:14px}
 .v13t{display:flex;gap:6px;margin:8px 0}.v13t button{flex:1}.v13t .on{background:var(--acc);color:#fff}
 .v13q{padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin:10px 0;background:var(--card)}
@@ -19,7 +26,7 @@ window.V13=V13;
 .v13md h1,.v13md h2,.v13md h3{margin:.9em 0 .3em}.v13md h1{font-size:21px}.v13md h2{font-size:18px}.v13md h3{font-size:16px}
 .v13md li{margin:2px 0}.v13md code{background:var(--line);padding:0 4px;border-radius:4px}
 .v13sc{font-size:44px;font-weight:700;text-align:center;margin:6px 0}
-.v13tm{position:sticky;top:0;background:var(--bg);padding:6px 0;font-weight:700;z-index:2}
+.v13tm{position:sticky;top:56px;background:var(--bg);padding:6px 0;font-weight:700;z-index:2}
 .v13ok{color:#16a34a}.v13ko{color:#dc2626}
 `;document.head.appendChild(s)})();
 
@@ -38,7 +45,7 @@ function v13katex(){if(window.renderMathInElement)return Promise.resolve();
 async function v13math(el){try{await v13katex();renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false},{left:'$',right:'$',display:false}],throwOnError:false})}catch(e){}}
 
 /* Markdown minimal et sûr (tout est échappé avant mise en forme ; les formules sont protégées) */
-function v13md(t){const M=[];t=String(t||'').replace(/\$\$[\s\S]+?\$\$|\$[^\n$]+?\$/g,m=>{M.push(m);return'\u0001'+(M.length-1)+'\u0001'});
+function v13md(t){const M=[];if(Array.isArray(t))t=t.map(x=>typeof x=='string'?x:(x&&x.text)||'').join('');t=String(t||'').replace(/\$\$[\s\S]+?\$\$|\$[^\n$]+?\$/g,m=>{M.push(m);return'\u0001'+(M.length-1)+'\u0001'});
  const inl=s=>E(s).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<i>$2</i>');
  let h='',ul=0,ol=0;const cl=()=>{if(ul){h+='</ul>';ul=0}if(ol){h+='</ol>';ol=0}};
  for(const L of t.split('\n')){let m;
@@ -113,7 +120,7 @@ function v13draw(){const b=$('#v13b');if(!b)return;const sc=V13.screen;
    const d=lsg('v13cur:'+cur.id);if(d&&d.exam)h+=`<div class=v13s>Examen en cours détecté. <button data-a=resume>Reprendre</button></div>`}
   else{const H=V13.his;h+=H?H.length?`<p class=hint>Évolution : ${H.slice().reverse().map(a=>a.score).join(' → ')} /20</p>`+H.map(a=>`<div class=rs data-a=viewatt data-i="${a.id}"><b>${a.score} / 20</b><small>${dtm(a.submitted_at)} · ${(a.report&&a.report.misunderstood_notions||[]).slice(0,3).map(E).join(', ')}</small></div>`).join(''):'<p class=hint>Aucune tentative pour l’instant.</p>':'<p class=hint>Chargement…</p>'}
   b.innerHTML=h;return}
- if(sc=='rev'){const r=V13.cur;b.innerHTML=`<div class=f><button data-a=home>‹ Retour</button><button class=p data-a=speak>🔊 Écouter</button><button data-a=stopsp>⏹</button></div><div class=sheet style="padding:10px 14px"><div class=v13md id=v13m>${v13md(r.content)}</div></div>`;v13math($('#v13m'));return}
+ if(sc=='rev'){const r=V13.cur;b.innerHTML=`<div class="f v13rb"><button data-a=home>‹ Retour</button><button class=p data-a=speak>🔊 Écouter</button><button data-a=stopsp>⏹ Arrêter</button></div><div class=sheet><div class=v13md id=v13m>${v13md(r.content)}</div></div>`;v13math($('#v13m'));return}
  if(sc=='exam'){const ex=V13.exam;b.innerHTML=`<div class=v13tm><button data-a=close>✕</button> ${E(ex.exam.title)} ${ex.exam.duration_minutes?'· ⏱ <span id=v13tm></span>':''}</div>`+ex.questions.map((q,i)=>`<div class=v13q data-q="${E(q.id)}"><b>${i+1}. <small>(${q.points} pt${q.points>1?'s':''} · ${E(q.type.replace('_',' '))})</small></b><div class=v13md>${v13md(q.text)}</div>`+
     (q.type=='qcm'?(q.choices||[]).map((c,k)=>`<label><input type=radio name="${E(q.id)}" value="${k}" ${String(ex.ans[q.id])===String(k)?'checked':''}> ${E(c)}</label>`).join(''):q.type=='vrai_faux'?['true','false'].map(v=>`<label><input type=radio name="${E(q.id)}" value="${v}" ${String(ex.ans[q.id])===v?'checked':''}> ${v=='true'?'Vrai':'Faux'}</label>`).join(''):`<textarea name="${E(q.id)}" rows=${q.type=='dissertation'?12:4}>${E(ex.ans[q.id]||'')}</textarea>`)+'</div>').join('')+`<button class=p data-a=submit ${V13.busy?'disabled':''}>${V13.busy?'Correction en cours…':'Remettre ma copie'}</button>`;
   b.oninput=b.onchange=()=>v13save();v13math(b);v13tick();return}
@@ -125,10 +132,10 @@ function v13draw(){const b=$('#v13b');if(!b)return;const sc=V13.screen;
    (rp.misunderstood_notions&&rp.misunderstood_notions.length?`<div class=lh><b>🧩 Notions mal comprises</b></div><ul>${rp.misunderstood_notions.map(x=>`<li>${E(x)}</li>`).join('')}</ul>`:'')+
    (rp.recommendations&&rp.recommendations.length?`<div class=lh><b>💡 Recommandations</b></div><ul>${rp.recommendations.map(x=>`<li>${E(x)}</li>`).join('')}</ul>`:'')+
    `<div class=lh><b>Correction détaillée</b></div>`+rp.per_question.map((p,i)=>{const q=Q.find(z=>z.id==p.id)||{};const ca=p.type=='qcm'&&q.choices?q.choices[+p.correct_answer]:p.type=='vrai_faux'?(String(p.correct_answer)=='true'?'Vrai':'Faux'):p.correct_answer;
-    return`<div class=v13q><b>${i+1}. <span class="${p.obtained>=p.points?'v13ok':'v13ko'}">${p.obtained} / ${p.points}</span></b><div class=v13md>${v13md(q.text||'')}</div><p><i>Votre réponse :</i> ${E(ga(p,q,(R.answers||{})[p.id]))}</p><div class=v13md><b>Corrigé :</b> ${v13md(String(ca??''))}</div>${p.comment?`<div class=v13md><b>Commentaire :</b> ${v13md(p.comment)}</div>`:''}${p.explanation?`<div class=v13md><b>Explication :</b> ${v13md(p.explanation)}</div>`:''}</div>`}).join('');
+    return`<div class=v13q><b>${i+1}. <span class="${p.obtained>=p.points?'v13ok':'v13ko'}">${p.obtained} / ${p.points}</span></b><div class=v13md>${v13md(q.text||'')}</div><p><i>Votre réponse :</i> ${E(ga(p,q,(R.answers||{})[p.id]))}</p><div class=v13md><b>Corrigé :</b> ${v13md(String(ca==null?'':ca))}</div>${p.comment?`<div class=v13md><b>Commentaire :</b> ${v13md(p.comment)}</div>`:''}${p.explanation?`<div class=v13md><b>Explication :</b> ${v13md(p.explanation)}</div>`:''}</div>`}).join('');
   v13math(b)}}
 
-const ga=(p,q,a)=>a===undefined||a===''?'(sans réponse)':p.type=='qcm'&&q.choices?String(q.choices[+a]??a):p.type=='vrai_faux'?(String(a)=='true'?'Vrai':'Faux'):String(a).slice(0,1500);
+const ga=(p,q,a)=>a===undefined||a===''?'(sans réponse)':p.type=='qcm'&&q.choices?String(q.choices[+a]!=null?q.choices[+a]:a):p.type=='vrai_faux'?(String(a)=='true'?'Vrai':'Faux'):String(a).slice(0,1500);
 /* ---------- Actions ---------- */
 async function v13act(a,d){
  if(a=='close')return v13close();

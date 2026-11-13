@@ -6,7 +6,7 @@
    Chargé par v9.js, exécuté après v10.js. Ne modifie aucune autre fonctionnalité. */
 const V11={job:{},stop:0,lock:0};
 const v11safe=s=>String(s||'fichier').replace(/[\\/:*?"<>|]/g,' ').replace(/\s+/g,' ').trim().slice(0,60)||'fichier';
-function v11box(h){v11close();const o=document.createElement('div');o.id='v11o';o.style.cssText='position:fixed;inset:0;z-index:260;background:#000a;display:flex';o.innerHTML='<div class=scb>'+h+'</div>';o.onclick=e=>{if(e.target==o&&!V11.lock)o.remove()};document.body.appendChild(o);return o}
+function v11box(h){v11close();const o=document.createElement('div');o.id='v11o';o.style.cssText='position:fixed;top:0;right:0;bottom:0;left:0;z-index:260;background:#000a;display:flex';o.innerHTML='<div class=scb>'+h+'</div>';o.onclick=e=>{if(e.target==o&&!V11.lock)o.remove()};document.body.appendChild(o);return o}
 function v11close(){const o=$('#v11o');if(o)o.remove()}
 
 /* =============== 1) Paiement en cash =============== */

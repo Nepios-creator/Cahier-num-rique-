@@ -27,6 +27,23 @@ Mélange tous les types. Le total des points doit faire exactement 20.`;
 
 const clip = (s: unknown) => String(s ?? "").slice(0, MAX);
 
+// Une réponse unique de 16 à 20 questions est coupée par la limite de longueur : l'examen blanc est donc généré
+// en deux parties parallèles (A : questions courtes, B : questions longues), puis fusionné.
+async function genPart(want: string, content: string, prefix: string, max: number) {
+  let last: unknown;
+  for (let t = 0; t < 2; t++) {
+    try {
+      const o = parseJson(await mistral(EXAM_SYS,
+        `${want}\nIdentifiants des questions : ${prefix}1, ${prefix}2, …\n\nCONTENU DU CAHIER :\n${content}`, { json: true, max }));
+      const map: Record<string, string> = {};
+      const questions = (o.questions || []).map((q: any, n: number) => { const id = prefix + (n + 1); map[String(q.id ?? "")] = id; return { ...q, id }; });
+      const answer_key = (o.answer_key || []).map((k: any) => ({ ...k, id: map[String(k.id)] ?? String(k.id) }));
+      return { title: o.title, questions, answer_key };
+    } catch (e) { last = e; if (String((e as any)?.message) === "no_key") throw e; }
+  }
+  throw last;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -55,7 +72,17 @@ Deno.serve(async (req) => {
       const want = blanc
         ? "EXAMEN BLANC de 2 heures : 16 à 20 questions dont au moins 1 dissertation et 2 cas pratiques."
         : "EXAMEN SIMULÉ d'environ 1 heure : 10 à 14 questions.";
-      const out = parseJson(await mistral(EXAM_SYS, `${want}\n\nCONTENU DU CAHIER :\n${content}`, { json: true, max: 8000 }));
+      const parts = blanc
+        ? await Promise.all([
+          genPart("PARTIE A d'un EXAMEN BLANC de 2 heures : exactement 10 questions courtes (4 QCM, 3 vrai_faux, 3 definition), 1 point chacune. Réponses modèles et explications concises.", content, "a", 6000),
+          genPart("PARTIE B d'un EXAMEN BLANC de 2 heures : exactement 7 questions longues (1 dissertation de 6 points, 2 cas_pratique de 4 points, 2 raisonnement de 3 points, 2 ouverte de 3 points). Réponses modèles concises (10 lignes maximum ; dissertation : plan détaillé).", content, "b", 7000),
+        ])
+        : [await genPart(want, content, "q", 8000)];
+      const out = {
+        title: parts[0].title || parts[1]?.title || "Examen",
+        questions: parts.flatMap((p: any) => p.questions),
+        answer_key: parts.flatMap((p: any) => p.answer_key),
+      };
       const qs: any[] = (out.questions || []).map((q: any, i: number) => ({
         id: String(q.id || "q" + (i + 1)), type: String(q.type || "ouverte"), points: Math.max(0.5, Number(q.points) || 1),
         text: String(q.text || ""), ...(Array.isArray(q.choices) ? { choices: q.choices.map(String).slice(0, 6) } : {}),
