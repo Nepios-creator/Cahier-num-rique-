@@ -9,8 +9,15 @@ window.V13=V13;
 
 /* ---------- Style ---------- */
 (()=>{const s=document.createElement('style');s.textContent=`
-#v13o{position:fixed;inset:0;z-index:150;background:#000a;display:flex}
-#v13o .scb{display:flex;flex-direction:column;max-height:100%;overflow:auto}
+#v13o{position:fixed;top:0;right:0;bottom:0;left:0;z-index:150;background:var(--bg);overflow:hidden}
+#v13o .scb{position:absolute;top:0;right:0;bottom:0;left:0;width:auto;max-width:none;height:auto;max-height:none;margin:0;border:0;border-radius:0;box-shadow:none;background:var(--bg);display:block;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 0 60px;box-sizing:border-box}
+#v13o .drh{position:sticky;top:0;z-index:5;background:var(--bg);min-height:56px;box-sizing:border-box;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;border-bottom:1px solid var(--line);font-size:18px}
+#v13o .drh button{width:auto;padding:8px 14px}
+#v13b{width:100%;max-width:860px;margin:0 auto;padding:12px 16px;box-sizing:border-box}
+#v13b .v13md{overflow-wrap:anywhere}
+#v13b .sheet{flex:none;overflow:visible;padding:14px 18px}
+#v13b .v13rb{position:sticky;top:56px;z-index:4;background:var(--bg);padding:6px 0}
+.katex-display{overflow-x:auto;overflow-y:hidden}
 .v13s{padding:8px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);margin:6px 0;font-size:14px}
 .v13t{display:flex;gap:6px;margin:8px 0}.v13t button{flex:1}.v13t .on{background:var(--acc);color:#fff}
 .v13q{padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin:10px 0;background:var(--card)}
