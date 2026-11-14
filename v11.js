@@ -97,7 +97,7 @@ async function v11view(id,tab){const f=v11fa(id);if(!f)return;tab=tab||'t';
  v11box(`<div class=drh><b>📝 ${esc(f.x.n||'Enregistrement')}</b><button onclick="v11close()">✕</button></div>
 <div style="display:flex;gap:8px;margin:10px 0"><button class="${tab=='t'?'p':''}" style="flex:1" onclick="v11view('${id}','t')">Transcription</button><button class="${tab=='r'?'p':''}" style="flex:1" onclick="v11view('${id}','r')">Résumé</button></div>
 <div id=v11c>${body}</div>
-<div class=f><button onclick="v11copy('${id}','${tab}')">📋 Copier</button><button onclick="v11sharet('${id}','${tab}')">📤 Envoyer ce texte</button><button onclick="v11note('${id}','${tab}')">💾 Enregistrer dans Notes complémentaires</button><button onclick="v11del('${id}')">🗑 Effacer la transcription</button></div>`)}
+<div class=f><button onclick="v11copy('${id}','${tab}')">📋 Copier</button><button onclick="v11note('${id}','${tab}')">💾 Enregistrer dans Notes complémentaires</button><button onclick="v11del('${id}')">🗑 Effacer la transcription</button></div>`)}
 async function v11txt(id,tab){const f=v11fa(id),n=(f&&f.x.n)||'Enregistrement';
  if(tab=='r'){const r=await fget('rs:'+id);return{title:'Résumé : '+n,text:v11plain(r||''),html:clean(r||'')}}
  const t=await fget('tr:'+id)||'';return{title:'Transcription : '+n,text:t,html:t.split(/\n{2,}/).map(p=>'<p>'+esc(p).replace(/\n/g,'<br>')+'</p>').join('')}}
@@ -105,8 +105,7 @@ function v11plain(h){const d=document.createElement('div');d.innerHTML=clean(h||
  return(d.textContent||'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').replace(/\n[ \t]+/g,'\n').replace(/\n{3,}/g,'\n\n').trim()}
 async function v11copy(id,tab){const x=await v11txt(id,tab);if(!x.text)return toast('Rien à copier');try{await navigator.clipboard.writeText(x.text);toast('Texte copié')}catch(e){prompt('Copiez ce texte :',x.text)}}
 async function v11sharet(id,tab){const x=await v11txt(id,tab);if(!x.text)return toast('Rien à envoyer');
- try{if(navigator.share){await navigator.share({title:x.title,text:x.text});return}}catch(e){if(e&&e.name=='AbortError')return}
- v11copy(id,tab)}
+ toast('Envoi hors application désactivé : utilisez « Envoyer à une autre personne » (utilisateurs de l’application)')}
 async function v11note(id,tab){const f=v11fa(id);if(!f)return;const x=await v11txt(id,tab);if(!x.text)return toast('Rien à enregistrer');
  const p=f.p;p.cpl=p.cpl||[];if(p.cpl.some(a=>a.h==x.html))return toast('Déjà enregistré');
  p.cpl.push({id:uid(),t:x.title.slice(0,80),h:x.html,k:'ia',d:Date.now()});const n=Date.now();p.u=n;p.d=1;f.c.u=n;f.c.d=1;raw();
@@ -126,10 +125,11 @@ function v11items(){const o={n:[],l:[],a:[],d:[]};
 function v11send(pre){if(!cur)return;const o=V11.it=v11items();
  const grp=(t,k,L,lab)=>L.length?`<div style="margin:14px 0 4px"><b style="font-size:16px">${t}</b></div>`+L.map(x=>`<label style="display:flex;gap:10px;align-items:center;margin:6px 0"><input type=checkbox style="width:22px;height:22px;flex:none" data-k="${k}:${x.id}"${pre==k+':'+x.id?' checked':''}><span style="flex:1;min-width:0">${esc(x.t)} <small class=hint>${lab(x)}</small></span></label>`).join(''):'';
  const L=grp('📝 Notes complétées','n',o.n,x=>'page '+x.pi)+grp('📘 Leçons complétées','l',o.l,x=>'page '+x.pi)+grp('🎙 Audios','a',o.a,x=>'page '+x.pi)+grp('📕 PDF et Word','d',o.d,x=>x.ty=='pdf'?'PDF':'Word');
- v11box(`<div class=drh><b>📤 Envoyer à une autre personne</b><button onclick="v11close()">✕</button></div>${L?`<p class=hint>Cochez ce que vous voulez envoyer.</p>${L}<div class=f style="margin-top:14px"><button class=p onclick="v11share()">📲 Partager (WhatsApp, e-mail, Bluetooth…)</button><label>Ou, pour un collègue qui utilise l’application (notes et leçons seulement)<input id=v11e type=email placeholder="e-mail du collègue" autocomplete=off></label><button onclick="v11mail()">📥 Envoyer dans l’application</button></div>`:'<p class=hint>Rien à envoyer pour l’instant : ce cahier ne contient encore ni notes complémentaires, ni leçons, ni audios, ni documents.</p>'}`)}
+ v11box(`<div class=drh><b>📤 Envoyer à une autre personne</b><button onclick="v11close()">✕</button></div>${L?`<p class=hint>Cochez ce que vous voulez envoyer.</p>${L}<div class=f style="margin-top:14px"><label>Destinataire : un collègue qui utilise l’application (notes et leçons seulement)<input id=v11e type=email placeholder="e-mail du collègue" autocomplete=off></label><button onclick="v11mail()">📥 Envoyer dans l’application</button></div>`:'<p class=hint>Rien à envoyer pour l’instant : ce cahier ne contient encore ni notes complémentaires, ni leçons, ni audios, ni documents.</p>'}`)}
 const v11sel=()=>[...document.querySelectorAll('#v11o input[data-k]:checked')].map(i=>i.dataset.k);
 function v11dl(F){F.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name.replace(/\.weba$/,'.webm');document.body.appendChild(a);a.click();a.remove()},i*700));toast('Fichiers enregistrés : envoyez-les depuis votre téléphone')}
-async function v11share(){const S=v11sel();if(!S.length)return toast('Cochez au moins un élément');const o=V11.it,F=[],T=[];
+async function v11share(){return toast('Partage hors application désactivé : envoyez à un utilisateur de l’application');
+ const S=v11sel();if(!S.length)return toast('Cochez au moins un élément');const o=V11.it,F=[],T=[];
  try{for(const k of S){const t=k[0],id=k.slice(2);
   if(t=='n'||t=='l'){const x=(t=='n'?o.n:o.l).find(a=>a.id==id);if(x)T.push((t=='l'?'LEÇON : ':'NOTE : ')+x.t+'\n\n'+v11plain(x.h))}
   else if(t=='a'){const b=await fget(id),x=o.a.find(a=>a.id==id);if(b&&x){const e=v11ext(b.type||'');F.push(new File([b],v11safe(x.t)+'.'+(e=='webm'?'weba':e),{type:b.type||'audio/webm'}))}}
@@ -141,7 +141,7 @@ async function v11share(){const S=v11sel();if(!S.length)return toast('Cochez au 
   if(navigator.share)await navigator.share({title,text});else{try{await navigator.clipboard.writeText(text);toast('Texte copié : collez-le dans votre message')}catch(e){prompt('Copiez ce texte :',text)}}
  }catch(e){if(e&&e.name=='AbortError')return;toast(e&&e.name=='NotAllowedError'?'Touchez de nouveau « Partager »':'Partage impossible sur cet appareil')}}
 async function v11mail(){const S=v11sel().filter(k=>k[0]=='n'||k[0]=='l'),to=(($('#v11e')||{}).value||'').trim().toLowerCase(),o=V11.it;
- if(!S.length)return toast('Cochez au moins une note ou une leçon (les audios et PDF passent par « Partager »)');
+ if(!S.length)return toast('Cochez au moins une note ou une leçon (les audios et PDF ne peuvent pas être envoyés)');
  if(!/^\S+@\S+\.\S+$/.test(to))return toast('E-mail invalide');
  if(!D.s)return toast('Connectez-vous d’abord');if(to==D.s.email.toLowerCase())return toast('C’est votre propre adresse');
  let n=0;try{await tok();
