@@ -94,4 +94,21 @@
     if (x && x.fichier_path) await delFile(x.fichier_path);
     return drop0.apply(this, arguments);
   };
+
+  /* Connexion / inscription : mêmes règles qu'avant, mais messages clairs en français (au lieu de l'anglais brut du serveur) */
+  window.v6auth = window.auth = async function (login) {
+    var em = ($('#em').value || '').trim().toLowerCase(), pw = $('#pw').value;
+    if (!em || pw.length < 6) return toast('E-mail et mot de passe (6 caractères min.)');
+    try {
+      var j = await api(login ? '/auth/v1/token?grant_type=password' : '/auth/v1/signup', { m: 'POST', b: { email: em, password: pw } }, 0);
+      if (!j.access_token) return v6login('Compte créé : confirmez votre e-mail, puis connectez-vous.');
+      setS(j); raw(); v6enter(j.user.id, j.user.email, function () { raw(); v6gate(); });
+    } catch (e) {
+      var m = String(e && (e.msg || e.error_description || e.message) || '');
+      if (/invalid login/i.test(m)) m = 'E-mail ou mot de passe incorrect. Si vous avez déjà un compte, vérifiez le mot de passe ; sinon touchez « Créer un compte ».';
+      else if (/already registered/i.test(m)) m = 'Un compte existe déjà avec cet e-mail : touchez « Se connecter » avec votre mot de passe (mot de passe oublié : contactez l’administration).';
+      else if (/rate limit|too many/i.test(m)) m = 'Trop d’essais : patientez quelques minutes puis réessayez.';
+      toast(m || 'Échec de connexion');
+    }
+  };
 })();
