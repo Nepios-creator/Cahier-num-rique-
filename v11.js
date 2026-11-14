@@ -141,7 +141,7 @@ async function v11share(){return toast('Partage hors application désactivé : e
   if(navigator.share)await navigator.share({title,text});else{try{await navigator.clipboard.writeText(text);toast('Texte copié : collez-le dans votre message')}catch(e){prompt('Copiez ce texte :',text)}}
  }catch(e){if(e&&e.name=='AbortError')return;toast(e&&e.name=='NotAllowedError'?'Touchez de nouveau « Partager »':'Partage impossible sur cet appareil')}}
 async function v11mail(){const S=v11sel().filter(k=>k[0]=='n'||k[0]=='l'),to=(($('#v11e')||{}).value||'').trim().toLowerCase(),o=V11.it;
- if(!S.length)return toast('Cochez au moins une note ou une leçon (les audios et PDF passent par « Partager »)');
+ if(!S.length)return toast('Cochez au moins une note ou une leçon (les audios et PDF ne peuvent pas être envoyés)');
  if(!/^\S+@\S+\.\S+$/.test(to))return toast('E-mail invalide');
  if(!D.s)return toast('Connectez-vous d’abord');if(to==D.s.email.toLowerCase())return toast('C’est votre propre adresse');
  let n=0;try{await tok();
