@@ -128,7 +128,8 @@ function v11send(pre){if(!cur)return;const o=V11.it=v11items();
  v11box(`<div class=drh><b>📤 Envoyer à une autre personne</b><button onclick="v11close()">✕</button></div>${L?`<p class=hint>Cochez ce que vous voulez envoyer.</p>${L}<div class=f style="margin-top:14px"><label>Destinataire : un collègue qui utilise l’application (notes et leçons seulement)<input id=v11e type=email placeholder="e-mail du collègue" autocomplete=off></label><button onclick="v11mail()">📥 Envoyer dans l’application</button></div>`:'<p class=hint>Rien à envoyer pour l’instant : ce cahier ne contient encore ni notes complémentaires, ni leçons, ni audios, ni documents.</p>'}`)}
 const v11sel=()=>[...document.querySelectorAll('#v11o input[data-k]:checked')].map(i=>i.dataset.k);
 function v11dl(F){F.forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name.replace(/\.weba$/,'.webm');document.body.appendChild(a);a.click();a.remove()},i*700));toast('Fichiers enregistrés : envoyez-les depuis votre téléphone')}
-async function v11share(){const S=v11sel();if(!S.length)return toast('Cochez au moins un élément');const o=V11.it,F=[],T=[];
+async function v11share(){return toast('Partage hors application désactivé : envoyez à un utilisateur de l’application');
+ const S=v11sel();if(!S.length)return toast('Cochez au moins un élément');const o=V11.it,F=[],T=[];
  try{for(const k of S){const t=k[0],id=k.slice(2);
   if(t=='n'||t=='l'){const x=(t=='n'?o.n:o.l).find(a=>a.id==id);if(x)T.push((t=='l'?'LEÇON : ':'NOTE : ')+x.t+'\n\n'+v11plain(x.h))}
   else if(t=='a'){const b=await fget(id),x=o.a.find(a=>a.id==id);if(b&&x){const e=v11ext(b.type||'');F.push(new File([b],v11safe(x.t)+'.'+(e=='webm'?'weba':e),{type:b.type||'audio/webm'}))}}
