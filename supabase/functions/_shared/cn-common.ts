@@ -34,34 +34,60 @@ export async function hasPremium(uid: string): Promise<boolean> {
   return data === true;
 }
 
-/** Appel à l'API Mistral (clé dans le secret MISTRAL_API_KEY, jamais dans le code). */
+/** Clés Mistral : secrets MISTRAL_API_KEY, MISTRAL_API_KEY_2 … MISTRAL_API_KEY_10 (et/ou MISTRAL_API_KEYS = liste séparée par des virgules). Jamais dans le code. */
+function mistralKeys(): string[] {
+  const out: string[] = [];
+  const add = (v?: string | null) => { const k = (v || "").trim(); if (k && !out.includes(k)) out.push(k); };
+  add(Deno.env.get("MISTRAL_API_KEY"));
+  for (let i = 2; i <= 10; i++) add(Deno.env.get(`MISTRAL_API_KEY_${i}`));
+  (Deno.env.get("MISTRAL_API_KEYS") || "").split(",").forEach(add);
+  return out;
+}
+const mistralCool = new Map<string, number>(); // clé -> instant jusqu'auquel on l'évite (quota/erreur)
+let mistralRr = 0;
+
+/** Appel à l'API Mistral avec bascule automatique : si une clé est épuisée ou refusée (401/402/403/429), on passe à la suivante. */
 export async function mistral(system: string, user: string, opts: { json?: boolean; max?: number } = {}) {
-  const key = Deno.env.get("MISTRAL_API_KEY");
-  if (!key) throw new Error("no_key");
+  const keys = mistralKeys();
+  if (!keys.length) throw new Error("no_key");
   const model = Deno.env.get("MISTRAL_MODEL") || "mistral-large-latest";
   const body: Record<string, unknown> = {
     model, temperature: 0.2, max_tokens: opts.max ?? 6000,
     messages: [{ role: "system", content: system }, { role: "user", content: user }],
   };
   if (opts.json) body.response_format = { type: "json_object" };
+  // Répartition de la charge (tourniquet), clés « en pause » en dernier.
+  const now = Date.now();
+  const start = mistralRr++ % keys.length;
+  const order = keys.map((_, i) => keys[(start + i) % keys.length]);
+  order.sort((a, b) => ((mistralCool.get(a) || 0) > now ? 1 : 0) - ((mistralCool.get(b) || 0) > now ? 1 : 0));
   let last = "";
-  for (let i = 0; i < 2; i++) {
-    const r = await fetch("https://api.mistral.ai/v1/chat/completions", {
-      method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (r.ok) {
-      const j = await r.json();
-      // Mistral peut renvoyer le contenu en blocs [{type:"text",text:"…"}] : on les met bout à bout.
-      const c = j.choices?.[0]?.message?.content;
-      if (Array.isArray(c)) {
-        return c.map((x: any) => (typeof x === "string" ? x : String(x?.text ?? x?.content ?? ""))).join("");
+  for (const key of order) {
+    for (let i = 0; i < 2; i++) {
+      let r: Response;
+      try {
+        r = await fetch("https://api.mistral.ai/v1/chat/completions", {
+          method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } catch { last = "mistral_network"; await new Promise((s) => setTimeout(s, 800)); continue; }
+      if (r.ok) {
+        const j = await r.json();
+        // Mistral peut renvoyer le contenu en blocs [{type:"text",text:"…"}] : on les met bout à bout.
+        const c = j.choices?.[0]?.message?.content;
+        if (Array.isArray(c)) {
+          return c.map((x: any) => (typeof x === "string" ? x : String(x?.text ?? x?.content ?? ""))).join("");
+        }
+        return String(c ?? "");
       }
-      return String(c ?? "");
+      last = `mistral_${r.status}`;
+      if ([401, 402, 403, 429].includes(r.status)) { // clé épuisée/refusée : pause puis clé suivante
+        mistralCool.set(key, Date.now() + (r.status === 429 ? 60_000 : 600_000));
+        break;
+      }
+      if (r.status < 500) throw new Error(last); // erreur de requête : changer de clé n'aiderait pas
+      await new Promise((s) => setTimeout(s, 1500));
     }
-    last = `mistral_${r.status}`;
-    if (r.status !== 429 && r.status < 500) break;
-    await new Promise((s) => setTimeout(s, 1500));
   }
   throw new Error(last || "mistral_error");
 }
