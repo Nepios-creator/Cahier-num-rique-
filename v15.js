@@ -111,4 +111,48 @@
       toast(m || 'Échec de connexion');
     }
   };
+
+  /* Mot de passe oublié : bouton sur l'écran de connexion + écran de nouveau mot de passe quand on revient par le lien reçu par e-mail */
+  var login0 = window.v6login;
+  window.v6login = function () {
+    var r = login0.apply(this, arguments);
+    try {
+      var f = document.querySelector('.f');
+      if (f && !document.getElementById('v15fp')) {
+        var b = document.createElement('button'); b.id = 'v15fp'; b.type = 'button'; b.textContent = 'Mot de passe oublié ?';
+        b.style.cssText = 'background:none;border:0;box-shadow:none;text-decoration:underline;margin-top:6px'; b.onclick = window.v15forgot; f.appendChild(b);
+      }
+    } catch (e) {}
+    return r;
+  };
+  window.v15forgot = async function () {
+    var em = (($('#em') || {}).value || '').trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(em)) return toast('Écrivez d’abord votre e-mail dans le champ ci-dessus');
+    try {
+      await api('/auth/v1/recover?redirect_to=' + encodeURIComponent(location.origin + location.pathname), { m: 'POST', b: { email: em } }, 0);
+      toast('Si ce compte existe, un e-mail de réinitialisation vient d’être envoyé (vérifiez aussi les courriers indésirables).');
+    } catch (e) {
+      toast(/rate|seconds|too many/i.test(String(e && (e.msg || e.message) || '')) ? 'Patientez une minute avant de redemander un e-mail.' : 'Envoi impossible pour le moment. Contactez l’administration.');
+    }
+  };
+  (function () {
+    var h = location.hash || '';
+    if (!/type=recovery/.test(h)) return;
+    var tk = new URLSearchParams(h.slice(1)).get('access_token'); if (!tk) return;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    var o = document.createElement('div');
+    o.style.cssText = 'position:fixed;inset:0;z-index:99999;background:var(--bg,#f4f4ff);display:flex;align-items:center;justify-content:center;padding:20px';
+    o.innerHTML = '<div class=f style="width:100%;max-width:420px"><h2>Nouveau mot de passe</h2><label>Nouveau mot de passe (6 caractères min.)<input id=v15np type=password autocomplete=new-password></label><button class=p id=v15ok>Enregistrer</button><button id=v15no>Annuler</button></div>';
+    (document.body || document.documentElement).appendChild(o);
+    o.querySelector('#v15no').onclick = function () { o.remove(); };
+    o.querySelector('#v15ok').onclick = async function () {
+      var pw = o.querySelector('#v15np').value;
+      if (pw.length < 6) return toast('6 caractères minimum');
+      try {
+        var r = await fetch(SB + '/auth/v1/user', { method: 'PUT', headers: { apikey: KEY, Authorization: 'Bearer ' + tk, 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+        if (!r.ok) throw 0;
+        o.remove(); toast('Mot de passe modifié : connectez-vous avec le nouveau.');
+      } catch (e) { toast('Lien expiré ou invalide : redemandez un e-mail.'); }
+    };
+  })();
 })();
