@@ -69,13 +69,21 @@
   window.adgOpt = function (n) { if (n === 1) optAmb(); else optDirect(); };
 
   /* --- 1. Avec un ambassadeur --- */
-  var codes = [];
+  var codes = [], groups = [], openU = {};
   function optAmb() {
-    app.innerHTML = head('Choisir mon ambassadeur') + '<div class=f><p>Choisissez le code de votre ambassadeur. Il recevra votre demande et remplira votre formulaire.</p>' +
-      '<input id=adgq placeholder="Rechercher un code (ex: AMB-…)" autocapitalize=characters autocomplete=off oninput="adgFilter()"><div id=adgl><p class=hint>Chargement…</p></div>' +
+    app.innerHTML = head('Choisir mon ambassadeur') + '<div class=f><p>Choisissez votre université puis l’ambassadeur dans la liste. Il recevra votre demande et remplira votre formulaire.</p>' +
+      '<input id=adgq placeholder="Filtrer la liste (université ou code)" autocapitalize=characters autocomplete=off oninput="adgFilter()"><div id=adgl><p class=hint>Chargement…</p></div>' +
       '<button onclick="v6wait()">Retour</button></div>';
-    rpc('list_ambassadors').then(function (r) { codes = (r || []).map(function (x) { return x.code; }); adgFilter(); }).catch(function () { var l = $$('#adgl'); if (l) l.innerHTML = '<p class=hint>Connexion impossible, réessayez.</p>'; });
+    var fail = function () { var l = $$('#adgl'); if (l) l.innerHTML = '<p class=hint>Connexion impossible, réessayez.</p>'; };
+    rpc('list_ambassadors_by_univ').then(function (r) {
+      var m = {}; groups = [];
+      (r || []).forEach(function (x) { var k = x.university_id || x.university; if (!m[k]) { m[k] = { name: x.university || 'Autre', codes: [] }; groups.push(m[k]); } m[k].codes.push(x.code); });
+      adgFilter();
+    }).catch(function () {
+      rpc('list_ambassadors').then(function (r) { groups = [{ name: 'Tous les ambassadeurs', codes: (r || []).map(function (x) { return x.code; }) }]; openU = { 0: 1 }; adgFilter(); }).catch(fail);
+    });
   }
+  window.adgToggle = function (i) { openU[i] = !openU[i]; adgFilter(); };
   window.adgFilter = function () {
     var q = (($$('#adgq') || {}).value || '').toUpperCase().trim(), l = $$('#adgl'); if (!l) return;
     var f = codes.filter(function (c) { return !q || c.indexOf(q) > -1; });
