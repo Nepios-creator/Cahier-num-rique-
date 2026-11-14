@@ -97,7 +97,7 @@ async function v11view(id,tab){const f=v11fa(id);if(!f)return;tab=tab||'t';
  v11box(`<div class=drh><b>📝 ${esc(f.x.n||'Enregistrement')}</b><button onclick="v11close()">✕</button></div>
 <div style="display:flex;gap:8px;margin:10px 0"><button class="${tab=='t'?'p':''}" style="flex:1" onclick="v11view('${id}','t')">Transcription</button><button class="${tab=='r'?'p':''}" style="flex:1" onclick="v11view('${id}','r')">Résumé</button></div>
 <div id=v11c>${body}</div>
-<div class=f><button onclick="v11copy('${id}','${tab}')">📋 Copier</button><button onclick="v11sharet('${id}','${tab}')">📤 Envoyer ce texte</button><button onclick="v11note('${id}','${tab}')">💾 Enregistrer dans Notes complémentaires</button><button onclick="v11del('${id}')">🗑 Effacer la transcription</button></div>`)}
+<div class=f><button onclick="v11copy('${id}','${tab}')">📋 Copier</button><button onclick="v11note('${id}','${tab}')">💾 Enregistrer dans Notes complémentaires</button><button onclick="v11del('${id}')">🗑 Effacer la transcription</button></div>`)}
 async function v11txt(id,tab){const f=v11fa(id),n=(f&&f.x.n)||'Enregistrement';
  if(tab=='r'){const r=await fget('rs:'+id);return{title:'Résumé : '+n,text:v11plain(r||''),html:clean(r||'')}}
  const t=await fget('tr:'+id)||'';return{title:'Transcription : '+n,text:t,html:t.split(/\n{2,}/).map(p=>'<p>'+esc(p).replace(/\n/g,'<br>')+'</p>').join('')}}
