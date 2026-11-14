@@ -86,8 +86,16 @@
   window.adgToggle = function (i) { openU[i] = !openU[i]; adgFilter(); };
   window.adgFilter = function () {
     var q = (($$('#adgq') || {}).value || '').toUpperCase().trim(), l = $$('#adgl'); if (!l) return;
-    var f = codes.filter(function (c) { return !q || c.indexOf(q) > -1; });
-    l.innerHTML = f.length ? f.map(function (c) { return '<button class=card style="display:block;width:100%;text-align:left;margin:6px 0" onclick="adgPick(\'' + E(c) + '\')"><b>' + E(c) + '</b></button>'; }).join('') : '<p class=hint>Aucun ambassadeur trouvé.</p>';
+    var h = '';
+    groups.forEach(function (g, i) {
+      var un = g.name.toUpperCase().indexOf(q) > -1;
+      var cs = !q || un ? g.codes : g.codes.filter(function (c) { return c.toUpperCase().indexOf(q) > -1; });
+      if (!cs.length) return;
+      var op = q ? true : !!openU[i];
+      h += '<button class=card style="display:flex;justify-content:space-between;width:100%;text-align:left;margin:6px 0" onclick="adgToggle(' + i + ')"><b>' + E(g.name) + '</b><span>' + cs.length + ' ' + (op ? '▲' : '▼') + '</span></button>';
+      if (op) h += cs.map(function (c) { return '<button class=card style="display:block;width:calc(100% - 16px);margin:4px 0 4px 16px;text-align:left" onclick="adgPick(\'' + E(c) + '\')"><b>' + E(c) + '</b></button>'; }).join('');
+    });
+    l.innerHTML = h || '<p class=hint>Aucun ambassadeur trouvé.</p>';
   };
   window.adgPick = function (code) {
     if (!confirm('Choisir l’ambassadeur ' + code + ' ?')) return;
