@@ -105,8 +105,7 @@ function v11plain(h){const d=document.createElement('div');d.innerHTML=clean(h||
  return(d.textContent||'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').replace(/\n[ \t]+/g,'\n').replace(/\n{3,}/g,'\n\n').trim()}
 async function v11copy(id,tab){const x=await v11txt(id,tab);if(!x.text)return toast('Rien à copier');try{await navigator.clipboard.writeText(x.text);toast('Texte copié')}catch(e){prompt('Copiez ce texte :',x.text)}}
 async function v11sharet(id,tab){const x=await v11txt(id,tab);if(!x.text)return toast('Rien à envoyer');
- try{if(navigator.share){await navigator.share({title:x.title,text:x.text});return}}catch(e){if(e&&e.name=='AbortError')return}
- v11copy(id,tab)}
+ toast('Envoi hors application désactivé : utilisez « Envoyer à une autre personne » (utilisateurs de l’application)')}
 async function v11note(id,tab){const f=v11fa(id);if(!f)return;const x=await v11txt(id,tab);if(!x.text)return toast('Rien à enregistrer');
  const p=f.p;p.cpl=p.cpl||[];if(p.cpl.some(a=>a.h==x.html))return toast('Déjà enregistré');
  p.cpl.push({id:uid(),t:x.title.slice(0,80),h:x.html,k:'ia',d:Date.now()});const n=Date.now();p.u=n;p.d=1;f.c.u=n;f.c.d=1;raw();
