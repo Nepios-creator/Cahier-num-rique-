@@ -34,10 +34,22 @@ export async function hasPremium(uid: string): Promise<boolean> {
   return data === true;
 }
 
-/** Appel à l'API Mistral (clé dans le secret MISTRAL_API_KEY, jamais dans le code). */
+/** Clés Mistral : secrets MISTRAL_API_KEY, MISTRAL_API_KEY_2 … MISTRAL_API_KEY_10 (et/ou MISTRAL_API_KEYS = liste séparée par des virgules). Jamais dans le code. */
+function mistralKeys(): string[] {
+  const out: string[] = [];
+  const add = (v?: string | null) => { const k = (v || "").trim(); if (k && !out.includes(k)) out.push(k); };
+  add(Deno.env.get("MISTRAL_API_KEY"));
+  for (let i = 2; i <= 10; i++) add(Deno.env.get(`MISTRAL_API_KEY_${i}`));
+  (Deno.env.get("MISTRAL_API_KEYS") || "").split(",").forEach(add);
+  return out;
+}
+const mistralCool = new Map<string, number>(); // clé -> instant jusqu'auquel on l'évite (quota/erreur)
+let mistralRr = 0;
+
+/** Appel à l'API Mistral avec bascule automatique : si une clé est épuisée ou refusée (401/402/403/429), on passe à la suivante. */
 export async function mistral(system: string, user: string, opts: { json?: boolean; max?: number } = {}) {
-  const key = Deno.env.get("MISTRAL_API_KEY");
-  if (!key) throw new Error("no_key");
+  const keys = mistralKeys();
+  if (!keys.length) throw new Error("no_key");
   const model = Deno.env.get("MISTRAL_MODEL") || "mistral-large-latest";
   const body: Record<string, unknown> = {
     model, temperature: 0.2, max_tokens: opts.max ?? 6000,
