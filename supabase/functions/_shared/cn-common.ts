@@ -56,24 +56,38 @@ export async function mistral(system: string, user: string, opts: { json?: boole
     messages: [{ role: "system", content: system }, { role: "user", content: user }],
   };
   if (opts.json) body.response_format = { type: "json_object" };
+  // Répartition de la charge (tourniquet), clés « en pause » en dernier.
+  const now = Date.now();
+  const start = mistralRr++ % keys.length;
+  const order = keys.map((_, i) => keys[(start + i) % keys.length]);
+  order.sort((a, b) => ((mistralCool.get(a) || 0) > now ? 1 : 0) - ((mistralCool.get(b) || 0) > now ? 1 : 0));
   let last = "";
-  for (let i = 0; i < 2; i++) {
-    const r = await fetch("https://api.mistral.ai/v1/chat/completions", {
-      method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (r.ok) {
-      const j = await r.json();
-      // Mistral peut renvoyer le contenu en blocs [{type:"text",text:"…"}] : on les met bout à bout.
-      const c = j.choices?.[0]?.message?.content;
-      if (Array.isArray(c)) {
-        return c.map((x: any) => (typeof x === "string" ? x : String(x?.text ?? x?.content ?? ""))).join("");
+  for (const key of order) {
+    for (let i = 0; i < 2; i++) {
+      let r: Response;
+      try {
+        r = await fetch("https://api.mistral.ai/v1/chat/completions", {
+          method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } catch { last = "mistral_network"; await new Promise((s) => setTimeout(s, 800)); continue; }
+      if (r.ok) {
+        const j = await r.json();
+        // Mistral peut renvoyer le contenu en blocs [{type:"text",text:"…"}] : on les met bout à bout.
+        const c = j.choices?.[0]?.message?.content;
+        if (Array.isArray(c)) {
+          return c.map((x: any) => (typeof x === "string" ? x : String(x?.text ?? x?.content ?? ""))).join("");
+        }
+        return String(c ?? "");
       }
-      return String(c ?? "");
+      last = `mistral_${r.status}`;
+      if ([401, 402, 403, 429].includes(r.status)) { // clé épuisée/refusée : pause puis clé suivante
+        mistralCool.set(key, Date.now() + (r.status === 429 ? 60_000 : 600_000));
+        break;
+      }
+      if (r.status < 500) throw new Error(last); // erreur de requête : changer de clé n'aiderait pas
+      await new Promise((s) => setTimeout(s, 1500));
     }
-    last = `mistral_${r.status}`;
-    if (r.status !== 429 && r.status < 500) break;
-    await new Promise((s) => setTimeout(s, 1500));
   }
   throw new Error(last || "mistral_error");
 }
