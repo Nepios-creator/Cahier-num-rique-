@@ -12,7 +12,7 @@
   var of = window.fetch;
   window.fetch = function (u, o) {
     try {
-      if (typeof u == 'string' && u.indexOf(SB) == 0) {
+      if (typeof u == 'string' && u.indexOf(SB) == 0 && u.indexOf('/functions/v1/') < 0) { /* pas pour les fonctions IA : l'en-tête y bloquerait la requête (CORS) */
         o = o || {}; var h = new Headers(o.headers || {}); h.set('x-device-id', DEV); o.headers = h;
       }
     } catch (e) {}
