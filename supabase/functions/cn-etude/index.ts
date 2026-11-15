@@ -54,9 +54,12 @@ Deno.serve(async (req) => {
     const b = await req.json();
     const db = admin();
     const nb = String(b.notebook_id || "");
-    if (!nb) return json({ error: "cahier_manquant" }, 400);
     const content = clip(b.content);
-    if (content.trim().length < 50) return json({ error: "cahier_vide" }, 400);
+    // La correction ("grade") n'a besoin ni du cahier ni de son texte : tout est relu depuis l'examen enregistré.
+    if (b.action !== "grade") {
+      if (!nb) return json({ error: "cahier_manquant" }, 400);
+      if (content.trim().length < 50) return json({ error: "cahier_vide" }, 400);
+    }
 
     if (b.action === "revision") {
       const mode = b.mode === "approfondie" ? "approfondie" : "general";
