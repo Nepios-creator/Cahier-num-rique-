@@ -54,9 +54,12 @@ Deno.serve(async (req) => {
     const b = await req.json();
     const db = admin();
     const nb = String(b.notebook_id || "");
-    if (!nb) return json({ error: "cahier_manquant" }, 400);
     const content = clip(b.content);
-    if (content.trim().length < 50) return json({ error: "cahier_vide" }, 400);
+    // La correction ("grade") n'a besoin ni du cahier ni de son texte : tout est relu depuis l'examen enregistré.
+    if (b.action !== "grade") {
+      if (!nb) return json({ error: "cahier_manquant" }, 400);
+      if (content.trim().length < 50) return json({ error: "cahier_vide" }, 400);
+    }
 
     if (b.action === "revision") {
       const mode = b.mode === "approfondie" ? "approfondie" : "general";
@@ -144,7 +147,15 @@ Tu corriges des copies avec bienveillance mais sans complaisance. Réponds par U
       const qcmErr = per.filter((p) => p.type !== undefined && (p.type === "qcm" || p.type === "vrai_faux") && !p.correct)
         .map((p) => ({ id: p.id, notion: p.notion, explanation: p.explanation }));
       const usr = `QUESTIONS OUVERTES À NOTER :\n${JSON.stringify(open)}\n\nQCM/VRAI-FAUX RATÉS :\n${JSON.stringify(qcmErr)}\n\nTENTATIVES PRÉCÉDENTES (récentes d'abord) :\n${JSON.stringify((prev || []).map((p: any) => ({ date: p.submitted_at, score: p.score, notions: p.report?.misunderstood_notions })))}`;
-      if (open.length || qcmErr.length) extra = { ...extra, ...parseJson(await mistral(sys, usr, { json: true, max: 5000 })) };
+      if (open.length || qcmErr.length) {
+        let ai: any = null, lastErr: unknown;
+        for (let t = 0; t < 2 && !ai; t++) {   // 2 essais si la réponse JSON est coupée/invalide
+          try { ai = parseJson(await mistral(sys, usr, { json: true, max: 6000 })); }
+          catch (e) { lastErr = e; if (String((e as any)?.message) !== "json_invalide") throw e; }
+        }
+        if (!ai) throw lastErr;
+        extra = { ...extra, ...ai };
+      }
       for (const g of extra.grades || []) {
         const row = per.find((p) => p.id === String(g.id));
         if (row && open.find((o) => o.id === row.id)) {
