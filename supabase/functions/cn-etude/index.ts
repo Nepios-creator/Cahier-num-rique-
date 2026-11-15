@@ -147,7 +147,15 @@ Tu corriges des copies avec bienveillance mais sans complaisance. Réponds par U
       const qcmErr = per.filter((p) => p.type !== undefined && (p.type === "qcm" || p.type === "vrai_faux") && !p.correct)
         .map((p) => ({ id: p.id, notion: p.notion, explanation: p.explanation }));
       const usr = `QUESTIONS OUVERTES À NOTER :\n${JSON.stringify(open)}\n\nQCM/VRAI-FAUX RATÉS :\n${JSON.stringify(qcmErr)}\n\nTENTATIVES PRÉCÉDENTES (récentes d'abord) :\n${JSON.stringify((prev || []).map((p: any) => ({ date: p.submitted_at, score: p.score, notions: p.report?.misunderstood_notions })))}`;
-      if (open.length || qcmErr.length) extra = { ...extra, ...parseJson(await mistral(sys, usr, { json: true, max: 5000 })) };
+      if (open.length || qcmErr.length) {
+        let ai: any = null, lastErr: unknown;
+        for (let t = 0; t < 2 && !ai; t++) {   // 2 essais si la réponse JSON est coupée/invalide
+          try { ai = parseJson(await mistral(sys, usr, { json: true, max: 6000 })); }
+          catch (e) { lastErr = e; if (String((e as any)?.message) !== "json_invalide") throw e; }
+        }
+        if (!ai) throw lastErr;
+        extra = { ...extra, ...ai };
+      }
       for (const g of extra.grades || []) {
         const row = per.find((p) => p.id === String(g.id));
         if (row && open.find((o) => o.id === row.id)) {
