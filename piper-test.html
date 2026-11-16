@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Test voix Piper</title>
+<!-- Page de TEST isolée : ne fait pas partie de l'application. Aucune donnée du cahier n'est lue ni modifiée. -->
+<script type="importmap">{"imports":{"onnxruntime-web":"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.mjs"}}</script>
+<style>
+body{font:16px/1.5 system-ui,sans-serif;margin:0;padding:16px;max-width:640px;margin-inline:auto;background:#fafafa;color:#111}
+h1{font-size:22px;margin:0 0 4px}small,.hint{color:#555}
+button,select{font:inherit;padding:12px 14px;border-radius:12px;border:1px solid #bbb;background:#fff;margin:4px 0;width:100%;box-sizing:border-box}
+button.p{background:#2f80ed;color:#fff;border-color:#2f80ed;font-weight:700}
+button:disabled{opacity:.45}
+pre{background:#fff;border:1px solid #ddd;border-radius:12px;padding:10px;white-space:pre-wrap;word-break:break-word;font-size:12.5px;max-height:260px;overflow:auto}
+.card{background:#fff;border:1px solid #ddd;border-radius:14px;padding:12px 14px;margin:12px 0}
+progress{width:100%;height:14px}
+audio{width:100%;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🔊 Test de la voix Piper</h1>
+<small>Page de test isolée : mesure si une voix neuronale hors ligne est assez rapide sur cet appareil.</small>
+
+<div class="card"><b>Appareil</b><pre id="diag">…</pre></div>
+
+<div class="card">
+  <b>Étape 1 — Bibliothèque</b>
+  <button class="p" id="b1">Charger la bibliothèque</button>
+</div>
+
+<div class="card">
+  <b>Étape 2 — Voix (≈ 63 Mo, une seule fois)</b>
+  <p class="hint">Utilise le Wi‑Fi si possible.</p>
+  <select id="vs" disabled><option>— d'abord l'étape 1 —</option></select>
+  <button class="p" id="b2" disabled>Télécharger la voix</button>
+  <progress id="pg" value="0" max="100" hidden></progress>
+</div>
+
+<div class="card">
+  <b>Étape 3 — Génération</b>
+  <p class="hint">Fais chaque test <b>deux fois</b> : le premier est plus lent (initialisation).</p>
+  <button class="p" id="b3" disabled>Phrase courte</button>
+  <button class="p" id="b4" disabled>Paragraphe long (≈ 600 caractères)</button>
+  <audio id="au" controls></audio>
+</div>
+
+<div class="card">
+  <b>Journal</b>
+  <pre id="log">En attente…</pre>
+  <button id="cp">Copier le rapport complet</button>
+  <p class="hint" id="cpm"></p>
+</div>
+
+<script type="module">
+const $ = id => document.getElementById(id);
+const T0 = performance.now(), L = [];
+function log(m) {
+  const s = '[' + ((performance.now() - T0) / 1000).toFixed(1) + ' s] ' + m;
+  L.push(s); $('log').textContent = L.join('\n'); $('log').scrollTop = 1e9; console.log(s);
+}
+window.addEventListener('error', e => log('ERREUR : ' + (e.message || e.error)));
+window.addEventListener('unhandledrejection', e => log('ERREUR (promesse) : ' + ((e.reason && e.reason.message) || e.reason)));
+
+/* ---------- Diagnostic appareil ---------- */
+let DIAG = '';
+(async () => {
+  const d = [];
+  d.push('Navigateur : ' + navigator.userAgent);
+  d.push('Cœurs processeur : ' + (navigator.hardwareConcurrency || '?'));
+  d.push('Mémoire (Go, approx.) : ' + (navigator.deviceMemory || '?'));
+  d.push('WebAssembly : ' + (typeof WebAssembly === 'object' ? 'oui' : 'NON'));
+  d.push('SharedArrayBuffer : ' + (typeof SharedArrayBuffer === 'function' ? 'oui' : 'non'));
+  d.push('Isolation cross-origin : ' + (self.crossOriginIsolated ? 'oui' : 'non (calcul sur 1 seul fil, plus lent)'));
+  d.push('Stockage privé (OPFS) : ' + (navigator.storage && navigator.storage.getDirectory ? 'oui' : 'NON'));
+  try {
+    const e = await navigator.storage.estimate();
+    d.push('Espace libre estimé : ' + Math.round((e.quota - e.usage) / 1048576) + ' Mo');
+  } catch (x) {}
+  try { const c = navigator.connection; if (c) d.push('Connexion : ' + (c.effectiveType || '?') + (c.saveData ? ' (économie de données)' : '')); } catch (x) {}
+  DIAG = d.join('\n'); $('diag').textContent = DIAG;
+})();
+
+/* ---------- Étape 1 : charger la bibliothèque ---------- */
+const SRC = [
+  'https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.4/dist/piper-tts-web.js',
+  'https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.4/+esm'
+];
+let tts = null;
+$('b1').onclick = async () => {
+  $('b1').disabled = true;
+  for (const u of SRC) {
+    try {
+      log('Chargement : ' + u);
+      tts = await import(u);
+      log('Bibliothèque chargée. Fonctions : ' + Object.keys(tts).join(', '));
+      break;
+    } catch (e) { log('ÉCHEC : ' + ((e && e.message) || e)); }
+  }
+  if (!tts) { log('Impossible de charger la bibliothèque. Copie le rapport et envoie-le moi.'); $('b1').disabled = false; return; }
+  let ids = [];
+  try {
+    const v = await tts.voices();
+    ids = Object.keys(v || {}).filter(k => /^fr/i.test(k)).sort();
+    log('Voix françaises proposées : ' + (ids.join(', ') || 'aucune'));
+  } catch (e) { log('Liste des voix indisponible : ' + ((e && e.message) || e)); }
+  if (!ids.length) ids = ['fr_FR-siwis-medium'];
+  $('vs').innerHTML = ids.map(i => '<option' + (i === 'fr_FR-siwis-medium' ? ' selected' : '') + '>' + i + '</option>').join('');
+  $('vs').disabled = false; $('b2').disabled = false;
+};
+
+/* ---------- Étape 2 : télécharger la voix ---------- */
+let READY = false;
+$('b2').onclick = async () => {
+  $('b2').disabled = true; $('pg').hidden = false;
+  const id = $('vs').value, t0 = performance.now();
+  try {
+    log('Téléchargement de ' + id + '…');
+    await tts.download(id, p => { if (p && p.total) $('pg').value = Math.round(p.loaded * 100 / p.total); });
+    log('Voix téléchargée en ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s');
+    try { log('Voix stockées sur l’appareil : ' + JSON.stringify(await tts.stored())); } catch (e) {}
+    READY = true; $('b3').disabled = false; $('b4').disabled = false;
+  } catch (e) { log('ÉCHEC du téléchargement : ' + ((e && e.message) || e)); $('b2').disabled = false; }
+};
+
+/* ---------- Étape 3 : générer et mesurer ---------- */
+const SHORT = 'Bonjour, ceci est un test de la voix française.';
+const LONG = 'La photosynthèse est le processus par lequel les plantes vertes transforment la lumière du soleil en énergie. ' +
+  'Elle se déroule dans les chloroplastes, des petits organites qui contiennent de la chlorophylle. ' +
+  'Grâce à cette énergie, la plante fabrique du glucose à partir du dioxyde de carbone et de l’eau, et elle libère de l’oxygène dans l’air. ' +
+  'C’est pourquoi les forêts sont souvent appelées les poumons de la planète. ' +
+  'Sans ce phénomène, la vie telle que nous la connaissons ne pourrait pas exister sur Terre.';
+let RUN = 0;
+async function gen(text, label) {
+  if (!READY) return;
+  $('b3').disabled = $('b4').disabled = true;
+  const id = $('vs').value, n = ++RUN;
+  try {
+    log('Test ' + n + ' (' + label + ', ' + text.length + ' car.) : génération…');
+    const t0 = performance.now();
+    const wav = await tts.predict({ text, voiceId: id });
+    const sec = (performance.now() - t0) / 1000;
+    const a = $('au'); a.src = URL.createObjectURL(wav);
+    await new Promise(r => { a.onloadedmetadata = r; a.onerror = r; setTimeout(r, 4000); });
+    const dur = a.duration;
+    if (dur && isFinite(dur)) {
+      const f = sec / dur;
+      log('Test ' + n + ' : ' + sec.toFixed(1) + ' s de calcul pour ' + dur.toFixed(1) + ' s d’audio → facteur ' + f.toFixed(2) +
+        (f < 1 ? ' (plus rapide que la lecture : OK)' : ' (PLUS LENT que la lecture : coupures probables)'));
+    } else log('Test ' + n + ' : ' + sec.toFixed(1) + ' s de calcul (durée audio inconnue)');
+    a.play().catch(e => log('Lecture automatique refusée : appuie sur ▶ du lecteur.'));
+  } catch (e) { log('ÉCHEC test ' + n + ' : ' + ((e && e.message) || e)); }
+  $('b3').disabled = $('b4').disabled = false;
+}
+$('b3').onclick = () => gen(SHORT, 'phrase courte');
+$('b4').onclick = () => gen(LONG, 'paragraphe long');
+
+/* ---------- Rapport ---------- */
+$('cp').onclick = async () => {
+  const txt = 'RAPPORT TEST PIPER\n' + DIAG + '\n\n' + L.join('\n');
+  try { await navigator.clipboard.writeText(txt); $('cpm').textContent = 'Copié. Colle-le dans la conversation.'; }
+  catch (e) { $('log').textContent = txt; $('cpm').textContent = 'Copie impossible : sélectionne le journal ci-dessus et copie-le à la main.'; }
+};
+log('Page prête.');
+</script>
+</body>
+</html>
