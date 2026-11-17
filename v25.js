@@ -194,6 +194,8 @@
 
   /* ---------- Boucle de lecture (remplace v9run pour les administrateurs) ---------- */
   var run0 = window.v9run;
+  /* Voix du téléphone : boucle de v26 (ne saute rien en arrière-plan) si présente, sinon celle de v9.js */
+  function nat() { return (typeof window.cnNativeRun === 'function' ? window.cnNativeRun : run0).apply(window, arguments); }
 
   function fallback(i, ps, p, err) {
     noteFail(err);
