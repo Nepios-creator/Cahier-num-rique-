@@ -92,7 +92,7 @@ const SRC = [
   'https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.4/dist/piper-tts-web.js',
   'https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.4/+esm'
 ];
-let tts = null, mapped = false, READY = false;
+let tts = null, mapped = false, READY = false, ortBase = '', SESSION = null, SESS_VOICE = null;
 async function chooseOrt() {
   let netFail = 0;
   for (const u of ORT) {
@@ -111,13 +111,18 @@ $('b1').onclick = async () => {
     if (!u) { log('Aucun fichier onnxruntime-web trouvé. Copie le rapport et envoie-le moi.'); $('b1').disabled = false; return; }
     const im = document.createElement('script'); im.type = 'importmap';
     im.textContent = JSON.stringify({ imports: { 'onnxruntime-web': u } });
-    document.head.appendChild(im); mapped = true; log('onnxruntime-web utilisé : ' + u);
+    document.head.appendChild(im); mapped = true; ortBase = u.replace(/[^/]*$/, ''); log('onnxruntime-web utilisé : ' + u);
+    for (const f of ['ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm']) {
+      try { const r = await fetch(ortBase + f, { method: 'HEAD', cache: 'no-store' }); log('Vérification ' + f + ' → HTTP ' + r.status); }
+      catch (e) { log('Vérification ' + f + ' → échec réseau'); }
+    }
   }
   for (const u of SRC) {
     try {
       log('Chargement : ' + u);
       tts = await import(u);
       log('Bibliothèque chargée. Fonctions : ' + Object.keys(tts).join(', '));
+      try { log('Emplacements par défaut : ONNX_BASE=' + tts.ONNX_BASE + ' | WASM_BASE=' + JSON.stringify(tts.WASM_BASE) + ' | WASM_LOCATIONS=' + JSON.stringify(tts.TtsSession && tts.TtsSession.WASM_LOCATIONS)); } catch (e) {}
       break;
     } catch (e) { log('ÉCHEC : ' + ((e && e.message) || e)); }
   }
@@ -161,6 +166,22 @@ const LONG = 'La photosynthèse est le processus par lequel les plantes vertes t
   'C’est pourquoi les forêts sont souvent appelées les poumons de la planète. ' +
   'Sans ce phénomène, la vie telle que nous la connaissons ne pourrait pas exister sur Terre.';
 let RUN = 0;
+/* On crée la session nous-mêmes pour imposer l'emplacement des fichiers de calcul (même version que onnxruntime-web). */
+const seen = {};
+async function synth(text, id) {
+  if (!SESSION || SESS_VOICE !== id) {
+    const d = (tts.TtsSession && tts.TtsSession.WASM_LOCATIONS) || {};
+    const w = { onnxWasm: ortBase, piperData: d.piperData, piperWasm: d.piperWasm };
+    log('Emplacements utilisés : ' + JSON.stringify(w));
+    SESSION = await tts.TtsSession.create({
+      voiceId: id, wasmPaths: w,
+      progress: p => { if (p && p.url && !seen[p.url]) { seen[p.url] = 1; log('Fichier demandé : ' + String(p.url).replace('https://', '') + (p.total ? ' (' + (p.total / 1048576).toFixed(1) + ' Mo)' : '')); } },
+      logger: m => log('[piper] ' + m)
+    });
+    SESS_VOICE = id; log('Session Piper prête.');
+  }
+  return await SESSION.predict(text);
+}
 async function gen(text, label) {
   if (!READY) return;
   $('b3').disabled = $('b4').disabled = true;
@@ -168,10 +189,7 @@ async function gen(text, label) {
   try {
     log('Test ' + n + ' (' + label + ', ' + text.length + ' car.) : génération…');
     const t0 = performance.now();
-    const seen = {};
-    const wav = await tts.predict({ text, voiceId: id }, p => {
-      if (p && p.url && !seen[p.url]) { seen[p.url] = 1; log('Fichier demandé : ' + String(p.url).replace('https://', '') + (p.total ? ' (' + (p.total / 1048576).toFixed(1) + ' Mo)' : '')); }
-    });
+    const wav = await synth(text, id);
     const sec = (performance.now() - t0) / 1000;
     const a = $('au'); a.src = URL.createObjectURL(wav);
     await new Promise(r => { a.onloadedmetadata = r; a.onerror = r; setTimeout(r, 4000); });
