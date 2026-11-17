@@ -204,7 +204,7 @@
     var c = S.cur; S.cur = null; S.held = false; release(c);
     try { if (A) A.pause(); } catch (e) {}
     resetEngine();
-    return run0();
+    return nat();
   }
 
   async function neuralRun() {
