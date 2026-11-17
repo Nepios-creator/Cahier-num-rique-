@@ -355,5 +355,5 @@
   }
 
   window.v25voix = openPanel;
-  window.cnNeural = { cfg: CFG, ns: NS, state: S, engineState: E, canNeural: canNeural, split: split, install: install };
+  window.cnNeural = { cfg: CFG, ns: NS, state: S, engineState: E, audio: function () { return A; }, canNeural: canNeural, split: split, install: install };
 })();
