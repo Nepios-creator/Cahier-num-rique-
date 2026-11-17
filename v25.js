@@ -194,6 +194,8 @@
 
   /* ---------- Boucle de lecture (remplace v9run pour les administrateurs) ---------- */
   var run0 = window.v9run;
+  /* Voix du téléphone : boucle de v26 (ne saute rien en arrière-plan) si présente, sinon celle de v9.js */
+  function nat() { return (typeof window.cnNativeRun === 'function' ? window.cnNativeRun : run0).apply(window, arguments); }
 
   function fallback(i, ps, p, err) {
     noteFail(err);
@@ -202,7 +204,7 @@
     var c = S.cur; S.cur = null; S.held = false; release(c);
     try { if (A) A.pause(); } catch (e) {}
     resetEngine();
-    return run0();
+    return nat();
   }
 
   async function neuralRun() {
@@ -241,12 +243,12 @@
         return neuralRun().catch(function (e) {
           if (id !== V9.id || V9.st !== 1) return;
           try { noteFail(e); var c = S.cur; S.cur = null; S.held = false; release(c); resetEngine(); } catch (x) {}
-          return run0();
+          return nat();
         });
       }
     } catch (e) {}
     try { if (S.cur) discard(); } catch (e) {}              /* voix naturelle indisponible : on repart sur la voix du téléphone */
-    return run0.apply(this, arguments);
+    return nat.apply(this, arguments);
   };
 
   /* Activation audio pendant le tap (iPhone) : seulement au DÉMARRAGE (pas pour pause/reprise, qui garderaient la position) */
@@ -353,5 +355,5 @@
   }
 
   window.v25voix = openPanel;
-  window.cnNeural = { cfg: CFG, ns: NS, state: S, engineState: E, canNeural: canNeural, split: split, install: install };
+  window.cnNeural = { cfg: CFG, ns: NS, state: S, engineState: E, audio: function () { return A; }, canNeural: canNeural, split: split, install: install };
 })();
