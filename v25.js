@@ -243,7 +243,7 @@
         return neuralRun().catch(function (e) {
           if (id !== V9.id || V9.st !== 1) return;
           try { noteFail(e); var c = S.cur; S.cur = null; S.held = false; release(c); resetEngine(); } catch (x) {}
-          return run0();
+          return nat();
         });
       }
     } catch (e) {}
