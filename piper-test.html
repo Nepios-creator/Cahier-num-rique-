@@ -6,7 +6,6 @@
 <meta name="robots" content="noindex">
 <title>Test voix Piper</title>
 <!-- Page de TEST isolée : ne fait pas partie de l'application. Aucune donnée du cahier n'est lue ni modifiée. -->
-<script type="importmap">{"imports":{"onnxruntime-web":"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.mjs"}}</script>
 <style>
 body{font:16px/1.5 system-ui,sans-serif;margin:0;padding:16px;max-width:640px;margin-inline:auto;background:#fafafa;color:#111}
 h1{font-size:22px;margin:0 0 4px}small,.hint{color:#555}
@@ -53,7 +52,7 @@ audio{width:100%;margin-top:8px}
   <p class="hint" id="cpm"></p>
 </div>
 
-<script type="module">
+<script>
 const $ = id => document.getElementById(id);
 const T0 = performance.now(), L = [];
 function log(m) {
@@ -83,13 +82,37 @@ let DIAG = '';
 })();
 
 /* ---------- Étape 1 : charger la bibliothèque ---------- */
+/* La bibliothèque importe « onnxruntime-web » : on cherche d'abord quel fichier existe vraiment (HEAD), puis on déclare l'import map. */
+const ORT = [
+  'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.es6.min.js',
+  'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.mjs',
+  'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.mjs'
+];
 const SRC = [
   'https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.4/dist/piper-tts-web.js',
   'https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.4/+esm'
 ];
-let tts = null;
+let tts = null, mapped = false, READY = false;
+async function chooseOrt() {
+  let netFail = 0;
+  for (const u of ORT) {
+    try {
+      const r = await fetch(u, { method: 'HEAD', cache: 'no-store' });
+      log('Vérification ' + u.replace('https://cdn.jsdelivr.net/npm/', '') + ' → HTTP ' + r.status);
+      if (r.ok) return u;
+    } catch (e) { netFail++; log('Vérification ' + u.replace('https://cdn.jsdelivr.net/npm/', '') + ' → échec réseau'); }
+  }
+  return netFail === ORT.length ? ORT[0] : null;
+}
 $('b1').onclick = async () => {
   $('b1').disabled = true;
+  if (!mapped) {
+    const u = await chooseOrt();
+    if (!u) { log('Aucun fichier onnxruntime-web trouvé. Copie le rapport et envoie-le moi.'); $('b1').disabled = false; return; }
+    const im = document.createElement('script'); im.type = 'importmap';
+    im.textContent = JSON.stringify({ imports: { 'onnxruntime-web': u } });
+    document.head.appendChild(im); mapped = true; log('onnxruntime-web utilisé : ' + u);
+  }
   for (const u of SRC) {
     try {
       log('Chargement : ' + u);
@@ -108,10 +131,16 @@ $('b1').onclick = async () => {
   if (!ids.length) ids = ['fr_FR-siwis-medium'];
   $('vs').innerHTML = ids.map(i => '<option' + (i === 'fr_FR-siwis-medium' ? ' selected' : '') + '>' + i + '</option>').join('');
   $('vs').disabled = false; $('b2').disabled = false;
+  try {
+    const st = await tts.stored();
+    if (st && st.indexOf($('vs').value) >= 0) {
+      READY = true; $('b3').disabled = false; $('b4').disabled = false;
+      log('Voix déjà présente sur l’appareil : étape 2 inutile (aucune donnée à retélécharger pour la voix).');
+    }
+  } catch (e) {}
 };
 
 /* ---------- Étape 2 : télécharger la voix ---------- */
-let READY = false;
 $('b2').onclick = async () => {
   $('b2').disabled = true; $('pg').hidden = false;
   const id = $('vs').value, t0 = performance.now();
@@ -139,7 +168,10 @@ async function gen(text, label) {
   try {
     log('Test ' + n + ' (' + label + ', ' + text.length + ' car.) : génération…');
     const t0 = performance.now();
-    const wav = await tts.predict({ text, voiceId: id });
+    const seen = {};
+    const wav = await tts.predict({ text, voiceId: id }, p => {
+      if (p && p.url && !seen[p.url]) { seen[p.url] = 1; log('Fichier demandé : ' + String(p.url).replace('https://', '') + (p.total ? ' (' + (p.total / 1048576).toFixed(1) + ' Mo)' : '')); }
+    });
     const sec = (performance.now() - t0) / 1000;
     const a = $('au'); a.src = URL.createObjectURL(wav);
     await new Promise(r => { a.onloadedmetadata = r; a.onerror = r; setTimeout(r, 4000); });
