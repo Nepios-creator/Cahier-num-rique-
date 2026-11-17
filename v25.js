@@ -248,7 +248,7 @@
       }
     } catch (e) {}
     try { if (S.cur) discard(); } catch (e) {}              /* voix naturelle indisponible : on repart sur la voix du téléphone */
-    return run0.apply(this, arguments);
+    return nat.apply(this, arguments);
   };
 
   /* Activation audio pendant le tap (iPhone) : seulement au DÉMARRAGE (pas pour pause/reprise, qui garderaient la position) */
