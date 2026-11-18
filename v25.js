@@ -20,9 +20,9 @@
     coolMax: 900000,  /* … jusqu'à 15 min */
     first: 70,        /* 1er morceau court : le son démarre plus vite */
     max: 130,         /* taille max des autres morceaux (caractères) */
-    ahead: 2          /* morceaux calculés d'avance pendant la lecture */
+    ahead: 5          /* morceaux calculés d'avance pendant la lecture (plus de tampon = moins de pauses) */
   };
-  var INST = 'cn_neural_inst', ON = 'cn_neural_on', RATE = 'cn_neural_rate';
+  var INST = 'cn_neural_inst', ON = 'cn_neural_on', RATE = 'cn_neural_rate', FX = 'cn_neural_fx';
 
   function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function lsSet(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} }
@@ -37,7 +37,7 @@
   /* ---------- État ---------- */
   var E = { tts: null, libP: null, session: null, sessP: null, mapped: false, ortBase: '' };
   var NS = { fails: 0, until: 0, why: '', told: 0 };            /* problème en cours (voix du téléphone) */
-  var S = { epoch: 0, cache: new Map(), q: Promise.resolve(), cur: null, held: false, wake: null };
+  var S = { epoch: 0, cache: new Map(), ok: new Set(), q: Promise.resolve(), cur: null, held: false, wake: null };
   var A = null;
 
   function noteFail(err) {
@@ -100,7 +100,82 @@
     E.sessP.catch(function () { E.sessP = null; });
     return E.sessP;
   }
-  function resetEngine() { S.epoch++; S.q = Promise.resolve(); S.cache.clear(); E.session = null; E.sessP = null; }
+  function resetEngine() { S.epoch++; S.q = Promise.resolve(); S.cache.clear(); S.ok.clear(); E.session = null; E.sessP = null; }
+
+  /* ---------- Traitement du son : moins de silences, son plus plein ---------- */
+  function fxOn() { return lsGet(FX) !== '0'; }
+  function shelf(fs, f0, dB, kind) {                        /* filtre en plateau (RBJ) */
+    var A = Math.pow(10, dB / 40), w = 2 * Math.PI * f0 / fs, c = Math.cos(w), al = Math.sin(w) / 2 * Math.SQRT2, t = 2 * Math.sqrt(A) * al, b0, b1, b2, a0, a1, a2;
+    if (kind === 'low') {
+      b0 = A * ((A + 1) - (A - 1) * c + t); b1 = 2 * A * ((A - 1) - (A + 1) * c); b2 = A * ((A + 1) - (A - 1) * c - t);
+      a0 = (A + 1) + (A - 1) * c + t; a1 = -2 * ((A - 1) + (A + 1) * c); a2 = (A + 1) + (A - 1) * c - t;
+    } else {
+      b0 = A * ((A + 1) + (A - 1) * c + t); b1 = -2 * A * ((A - 1) + (A + 1) * c); b2 = A * ((A + 1) + (A - 1) * c - t);
+      a0 = (A + 1) - (A - 1) * c + t; a1 = 2 * ((A - 1) - (A + 1) * c); a2 = (A + 1) - (A - 1) * c - t;
+    }
+    return [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0];
+  }
+  function biquad(x, k) {
+    var x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (var i = 0; i < x.length; i++) {
+      var v = x[i], o = k[0] * v + k[1] * x1 + k[2] * x2 - k[3] * y1 - k[4] * y2;
+      x2 = x1; x1 = v; y2 = y1; y1 = o; x[i] = o;
+    }
+  }
+  function toWav(y, sr) {
+    var n = y.length, b = new ArrayBuffer(44 + n * 2), v = new DataView(b);
+    function w(o, t) { for (var i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); }
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+    for (var i = 0; i < n; i++) { var s = y[i]; s = s > 1 ? 1 : s < -1 ? -1 : s; v.setInt16(44 + i * 2, s < 0 ? s * 32768 : s * 32767, true); }
+    return new Blob([b], { type: 'audio/wav' });
+  }
+  /* Coupe le silence au début et à la fin de chaque morceau et raccourcit les longs silences ; puis (option) son plus plein. */
+  async function polish(b) {
+    try {
+      var buf = await b.arrayBuffer();
+      if (buf.byteLength < 200) return b;
+      var dv = new DataView(buf);
+      if (dv.getUint32(0) !== 0x52494646 || dv.getUint16(20, true) !== 1 || dv.getUint16(22, true) !== 1 || dv.getUint16(34, true) !== 16 || dv.getUint32(36) !== 0x64617461) return b;
+      var sr = dv.getUint32(24, true), n = Math.min(dv.getUint32(40, true), buf.byteLength - 44) >> 1;
+      var pcm = new Int16Array(buf, 44, n), x = new Float32Array(n), peak = 0, i, f;
+      for (i = 0; i < n; i++) { var v = pcm[i] / 32768; x[i] = v; var a = v < 0 ? -v : v; if (a > peak) peak = a; }
+      if (peak < 0.0005) return b;
+      var F = Math.max(1, Math.round(sr * 0.01)), nf = Math.floor(n / F), thr = Math.max(0.003, peak * 0.012), act = new Uint8Array(nf);
+      for (f = 0; f < nf; f++) { var e = 0, o = f * F; for (i = 0; i < F; i++) e += x[o + i] * x[o + i]; act[f] = Math.sqrt(e / F) > thr ? 1 : 0; }
+      var f0 = 0, f1 = nf - 1;
+      while (f0 < nf && !act[f0]) f0++;
+      if (f0 >= nf) return b;
+      while (f1 > f0 && !act[f1]) f1--;
+      var from = Math.max(0, f0 - 6), to = Math.min(nf - 1, f1 + 8);      /* 60 ms avant la voix, 80 ms après */
+      var keep = [], run = 0, seg = from;
+      for (f = from; f <= to; f++) {
+        if (!act[f]) { run++; continue; }
+        if (run > 28) { keep.push([seg, f - run + 12]); seg = f - 12; }   /* silence de plus de 280 ms : on n'en garde que 240 ms */
+        run = 0;
+      }
+      keep.push([seg, to + 1]);
+      var len = 0, p = 0; keep.forEach(function (k) { len += (k[1] - k[0]) * F; });
+      var y = new Float32Array(len);
+      keep.forEach(function (k) { y.set(x.subarray(k[0] * F, k[1] * F), p); p += (k[1] - k[0]) * F; });
+      var fade = Math.min(Math.round(sr * 0.004), len >> 1);
+      for (i = 0; i < fade; i++) { var g = i / fade; y[i] *= g; y[len - 1 - i] *= g; }
+      var outSr = sr;
+      if (fxOn()) {
+        var m = y.length, z = new Float32Array(m * 2);                    /* 22 kHz -> 44 kHz (interpolation cubique) */
+        for (i = 0; i < m; i++) {
+          var a0 = y[i > 0 ? i - 1 : 0], a1 = y[i], a2 = y[i + 1 < m ? i + 1 : m - 1], a3 = y[i + 2 < m ? i + 2 : m - 1];
+          z[2 * i] = a1; z[2 * i + 1] = (-a0 + 9 * a1 + 9 * a2 - a3) / 16;
+        }
+        y = z; outSr = sr * 2;
+        biquad(y, shelf(outSr, 200, 3.5, 'low')); biquad(y, shelf(outSr, 5500, 2.5, 'high'));
+        var pk = 0; for (i = 0; i < y.length; i++) { var q = y[i] < 0 ? -y[i] : y[i]; if (q > pk) pk = q; }
+        var gain = pk > 0.0005 ? Math.min(4, 0.89 / pk) : 1;                /* volume régulier d'un morceau à l'autre */
+        for (i = 0; i < y.length; i++) y[i] *= gain;
+      }
+      return toWav(y, outSr);
+    } catch (err) { return b; }
+  }
 
   /* Synthèse d'un morceau : file unique (un seul calcul à la fois), résultat gardé en mémoire (relecture sans recalcul). */
   function want(text) {
@@ -111,12 +186,16 @@
       return engine().then(function (s) { return s.predict(text); });
     }).then(function (b) {
       if (!b || !(b.size > 1000)) throw new Error('audio vide');
+      return polish(b);
+    }).then(function (b) {
+      if (!b || !(b.size > 1000)) throw new Error('audio vide');
+      if (ep === S.epoch) S.ok.add(text);
       return b;
     });
     S.q = pr.catch(noop);
     S.cache.set(text, pr);
-    pr.catch(function () { if (S.cache.get(text) === pr) S.cache.delete(text); });
-    if (S.cache.size > 80) { var n = 0; S.cache.forEach(function (v, k) { if (n++ < 20) S.cache.delete(k); }); }
+    pr.catch(function () { if (S.cache.get(text) === pr) S.cache.delete(text); S.ok.delete(text); });
+    if (S.cache.size > 80) { var n = 0; S.cache.forEach(function (v, k) { if (n++ < 20) { S.cache.delete(k); S.ok.delete(k); } }); }
     return pr;
   }
   function prefetch(i, p, n) {
@@ -149,7 +228,17 @@
   }
   function release(c) { if (c && c.url) { try { URL.revokeObjectURL(c.url); } catch (e) {} c.url = null; } }
 
-  function playOne(blob, resume) {
+  /* Nombre de morceaux suivants déjà prêts (0, 1 ou 2). Si le calcul est en retard, on ralentit un peu la lecture plutôt que de s'arrêter. */
+  function readyAhead(i, p) {
+    var k = 0; p++;
+    while (k < 2) {
+      if (i >= V9.q.length) return 2;
+      var ps = pcs(i);
+      if (p < ps.length) { if (S.ok.has(ps[p])) { k++; p++; } else return k; } else { i++; p = 0; }
+    }
+    return k;
+  }
+  function playOne(blob, resume, mult) {
     var a = audio();
     return new Promise(function (res) {
       var done = false, c = S.cur;
@@ -159,7 +248,7 @@
         res(r);
       }
       if (!resume) { c.url = URL.createObjectURL(blob); a.src = c.url; }
-      try { a.defaultPlaybackRate = rate(); a.playbackRate = rate(); } catch (e) {}
+      try { var rr = Math.max(.7, rate() * (mult || 1)); a.defaultPlaybackRate = rr; a.playbackRate = rr; } catch (e) {}
       c.playing = true;
       a.onended = function () { fin('end'); };
       a.onerror = function () { fin('error'); };
@@ -225,7 +314,7 @@
           catch (e) { if (id !== V9.id || V9.st !== 1) return; return fallback(i, ps, p, e); }
           if (id !== V9.id || V9.st !== 1) return;
         }
-        var r = await playOne(blob, resume); resume = false;
+        var lag = readyAhead(i, p), r = await playOne(blob, resume, lag === 0 ? .9 : lag === 1 ? .95 : 1); resume = false;
         if (id !== V9.id || V9.st !== 1) return;             /* pause ou stop : déjà géré par le crochet */
         if (r === 'error') return fallback(i, ps, p, new Error('lecture audio impossible'));
         if (NS.fails) okAgain();
@@ -294,6 +383,7 @@
       '<p class=hint id=v25s></p>' +
       '<button class=p id=v25i>Installer la voix</button>' +
       '<label style="display:flex;gap:8px;align-items:center"><input type=checkbox id=v25c> Utiliser la voix naturelle pour la lecture</label>' +
+      '<label style="display:flex;gap:8px;align-items:center"><input type=checkbox id=v25f> Son plus plein (essai)</label>' +
       '<label>Vitesse<select id=v25r><option value=".8">Lente</option><option value=".9">Normale (recommandée)</option><option value="1">Rapide</option></select></label>' +
       '<button id=v25t>Écouter un exemple</button>' +
       '<button id=v25a>Réessayer maintenant</button>' +
@@ -310,6 +400,8 @@
       q('v25i').style.display = inst ? 'none' : '';
       q('v25c').parentNode.style.display = inst ? '' : 'none';
       q('v25r').parentNode.style.display = inst ? '' : 'none';
+      q('v25f').parentNode.style.display = inst ? '' : 'none';
+      q('v25f').checked = fxOn();
       q('v25t').style.display = inst ? '' : 'none';
       q('v25d').style.display = inst ? '' : 'none';
       q('v25a').style.display = (inst && NS.until > Date.now()) ? '' : 'none';
@@ -321,6 +413,7 @@
     q('v25x').onclick = close;
     o.addEventListener('click', function (e) { if (e.target === o) close(); });
     q('v25c').onchange = function () { lsSet(ON, this.checked ? '' : '0'); refresh(); };
+    q('v25f').onchange = function () { lsSet(FX, this.checked ? '' : '0'); S.cache.clear(); S.ok.clear(); };
     q('v25r').onchange = function () { r = parseFloat(this.value) || .9; lsSet(RATE, String(r)); };
     q('v25i').onclick = function () {
       q('v25i').disabled = true; msg('Installation…');
@@ -355,5 +448,5 @@
   }
 
   window.v25voix = openPanel;
-  window.cnNeural = { cfg: CFG, ns: NS, state: S, engineState: E, audio: function () { return A; }, canNeural: canNeural, split: split, install: install };
+  window.cnNeural = { cfg: CFG, ns: NS, state: S, engineState: E, audio: function () { return A; }, unlock: unlock, polish: polish, canNeural: canNeural, split: split, install: install };
 })();

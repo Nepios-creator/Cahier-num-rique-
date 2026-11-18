@@ -82,11 +82,7 @@
       prevSt = st;
       if (st === 1 && last) acc += now - last;
       last = now;
-      if (!el) build();
-      el.style.top = 'calc(' + (document.getElementById('v11t0') ? 56 : 8) + 'px + env(safe-area-inset-top,0px))';
-      el.style.background = st === 1 ? '#1d4ed8' : '#475569';
-      bt.textContent = st === 1 ? '⏸' : '▶️';
-      tx.textContent = fmt(acc) + ' · ' + pct() + ' %';
+      if (el) drop();                                            /* plus de bandeau minuteur à l'écran */
       media(st, force === true);
     } catch (e) {}
   }

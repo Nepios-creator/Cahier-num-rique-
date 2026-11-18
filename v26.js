@@ -94,8 +94,8 @@
     var ms = navigator.mediaSession;
     if (ms && ms.setActionHandler) {
       var h = function (n, f) { try { ms.setActionHandler(n, f); } catch (e) {} };
-      h('play', function () { try { if (V9.st === 2) window.lire(); } catch (e) {} });
-      h('pause', function () { try { if (V9.st === 1) window.lire(); } catch (e) {} });
+      h('play', function () { try { if (V9.st === 2) (window.cnToggle || window.lire)(); } catch (e) {} });
+      h('pause', function () { try { if (V9.st === 1) (window.cnToggle || window.lire)(); } catch (e) {} });
       h('stop', function () { try { if (V9.st !== 0 && typeof stopL === 'function') stopL(); } catch (e) {} });
     }
   } catch (e) {}
