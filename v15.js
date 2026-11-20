@@ -55,17 +55,7 @@
           var x = (t == 'n' ? o.n : o.l).find(function (a) { return a.id == id; }); if (!x) continue;
           row = { kind: t == 'l' ? 'lecon' : 'note', titre: (t == 'l' ? 'Leçon : ' : 'Note : ') + x.t + ' · ' + cur.cours, chap: x.ch, sujet: x.t, html: clean(x.h || '').slice(0, 150000) };
         } else {
-          var au = t == 'a', it = (au ? o.a : o.d).find(function (a) { return a.id == id; });
-          var b = it && await fget(au ? id : 'doc:' + id);
-          if (!b || b.size > MAXB) { skip++; continue; }
-          var pdf = !au && it.ty == 'pdf';
-          var mime = b.type || (au ? 'audio/webm' : pdf ? 'application/pdf' : DOCX);
-          var e = au ? (/mp4|aac|m4a/.test(mime) ? 'm4a' : /ogg/.test(mime) ? 'ogg' : /wav/.test(mime) ? 'wav' : /mpeg|mp3/.test(mime) ? 'mp3' : 'webm') : (pdf ? 'pdf' : 'docx');
-          var path = uidT() + '/' + uid() + '.' + e;
-          var r = await fetch(SB + '/storage/v1/object/cn-partages/' + path, { method: 'POST', headers: Object.assign(stH(), { 'Content-Type': mime, 'x-upsert': 'false' }), body: b });
-          if (!r.ok) throw { message: 'upload' };
-          up = path;
-          row = { kind: au ? 'audio' : pdf ? 'pdf' : 'doc', titre: (au ? 'Audio : ' : 'Document : ') + it.t + ' · ' + cur.cours, chap: '', sujet: it.t, html: '', nom: it.t + '.' + e, fichier_path: path, mime: mime, taille: b.size };
+          continue;   /* audio, PDF, Word : déjà proposés par le partage du téléphone plus haut, jamais envoyés en ligne */
         }
         try { await api('/rest/v1/cn_partages', { m: 'POST', h: { Prefer: 'return=minimal' }, b: Object.assign(row, dest) }); n++; }
         catch (er) { if (up) delFile(up); throw er; }
