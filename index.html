@@ -129,16 +129,49 @@ function setS(j){D.s={access_token:j.access_token,refresh_token:j.refresh_token,
 async function auth(login){const em=$('#em').value.trim(),pw=$('#pw').value;if(!em||pw.length<6)return toast('E-mail et mot de passe (6 caractères min.)');
 try{const j=await api(login?'/auth/v1/token?grant_type=password':'/auth/v1/signup',{m:'POST',b:{email:em,password:pw}},0);if(!j.access_token)return toast('Compte créé : confirmez votre e-mail, puis connectez-vous');setS(j);D.c.forEach(c=>{c.d=1;c.u=c.u||Date.now();c.pages.forEach(p=>{p.d=1;p.u=p.u||Date.now()})});raw();await sync();menu()}catch(e){toast(e.msg||e.error_description||e.message||'Échec de connexion')}}
 async function tok(){if(Date.now()>D.s.exp){setS(await api('/auth/v1/token?grant_type=refresh_token',{m:'POST',b:{refresh_token:D.s.refresh_token}},0));raw()}}
+/* ===== TEXTE SEUL : en ligne, on n'envoie QUE le texte des notes (jamais photo, PDF, audio, vidéo) ===== */
+var MAX_PAGE_CHARS=100000,MAX_PAGE_BYTES=150000,QUOTA_KO=300,SYNC_MIN_MS=300000,CN_HIST=0,CN_BIG=new Set(),FULL=0;
+const octets=s=>new Blob([s]).size;
+/* Garde-fou réseau : aucun envoi de fichier vers les stockages cn-files et cn-partages (la lecture et la suppression restent permises) */
+(function(){const f0=window.fetch;window.fetch=function(u,o){try{if(/\/storage\/v1\/object\/(authenticated\/)?(cn-files|cn-partages)\//.test(String(u))&&/^(POST|PUT|PATCH)$/i.test((o&&o.method)||'GET'))return Promise.reject(new Error('envoi_fichier_desactive'))}catch(e){}return f0.apply(this,arguments)}})();
+/* Fonction unique : retire images, médias et fichiers d'un morceau de HTML, garde la mise en forme (gras, listes, titres, couleurs, surlignages) */
+function htmlTexteSeul(h){
+ h=String(h==null?'':h);
+ if(!/<\s*(img|picture|source|video|audio|canvas|svg|iframe|object|embed|link|script)\b|data:|blob:|url\s*\(/i.test(h))return h;
+ const d=new DOMParser().parseFromString('<body>'+h+'</body>','text/html'),B=d.body;
+ B.querySelectorAll('img,picture,svg,canvas').forEach(n=>{if(B.contains(n))n.replaceWith(d.createTextNode('[image non synchronisée]'))});
+ B.querySelectorAll('source,video,audio,iframe,object,embed,link,script').forEach(n=>n.remove());
+ B.querySelectorAll('*').forEach(n=>{[...n.attributes].forEach(a=>{
+  if(/(data|blob):/i.test(a.value)){n.removeAttribute(a.name);return}
+  if(a.name=='style'&&/url\s*\(/i.test(a.value)){const s=a.value.split(';').filter(x=>!/url\s*\(/i.test(x)).join(';').trim();if(s)n.setAttribute('style',s);else n.removeAttribute('style')}})});
+ return B.innerHTML.replace(/data:(image|application|audio|video)/gi,'data&#58;$1');
+}
+const cplTexteSeul=l=>(l||[]).map(x=>x&&typeof x=='object'?{...x,h:htmlTexteSeul(x.h||'')}:x);
+/* Appliquée dans api() : couvre TOUS les envois vers cn_pages, cn_cahiers et cn_partages (pages, notes complémentaires, partages, brouillons) */
+function txtBody(p,b){
+ if(!/\/rest\/v1\/(cn_pages|cn_partages|cn_cahiers)/.test(p))return b;
+ const w=v=>{if(Array.isArray(v))return v.map(w);if(v&&typeof v=='object'){const r={};for(const k in v)r[k]=(k=='html'||k=='h'||k=='dr')&&typeof v[k]=='string'?htmlTexteSeul(v[k]):w(v[k]);return r}return v};
+ return w(b);
+}
+function pageTropLongue(p){const h=htmlTexteSeul(p.html||'');return h.length>MAX_PAGE_CHARS||octets(h)>MAX_PAGE_BYTES||octets(JSON.stringify(cplTexteSeul(p.cpl||[])))>MAX_PAGE_BYTES}
+function signaleLongue(p){if(!CN_BIG.has(p.id)){CN_BIG.add(p.id);toast('Page trop longue pour la sauvegarde en ligne')}}
+/* Avant d'écraser une page locale par une version distante plus récente : si elle contient des photos, on garde une copie sur le téléphone (IndexedDB, clé hist:IDpage:horodatage) */
+function gardeLocal(p){try{if(/(data|blob):/i.test((p.html||'')+JSON.stringify(p.cpl||[]))){CN_HIST++;Promise.resolve(fput('hist:'+p.id+':'+Date.now(),new Blob([JSON.stringify({html:p.html||'',cpl:p.cpl||[]})],{type:'application/json'}))).catch(()=>{})}}catch(e){}}
+function espaceEnLigne(){let n=0;D.c.forEach(c=>{if(c.del)return;c.pages.forEach(p=>{n+=octets(htmlTexteSeul(p.html||''))+octets(JSON.stringify(cplTexteSeul(p.cpl||[])))})});return n}
+function jauge(){const o=Math.round(espaceEnLigne()/1024),pc=Math.min(100,Math.round(o*100/QUOTA_KO)),al=pc>=80;return `<div><p class=hint><b>Espace en ligne utilisé : ${o} Ko / ${QUOTA_KO} Ko</b></p><div style="height:10px;border-radius:6px;background:var(--line);overflow:hidden"><div style="width:${pc}%;height:100%;background:${al?'#c0392b':'var(--acc)'}"></div></div>${al?'<p class=hint style="color:#c0392b"><b>Attention :</b> vous approchez de la limite. Sauvegardez vos anciens cahiers dans Google Drive, puis allégez-les.</p>':''}<p class=hint><b>Seul le texte est sauvegardé en ligne.</b> Photos, PDF et audios restent sur votre téléphone : sauvegardez-les dans Google Drive.</p></div>`}
 let busy=0;async function sync(){if(!D.s||busy||!navigator.onLine)return;busy=1;try{await tok();
-const [rc,rp]=await Promise.all([api('/rest/v1/cn_cahiers?select=*'),api('/rest/v1/cn_pages?select=*')]);
+/* Synchro incrémentale : on ne demande que les lignes modifiées depuis le dernier passage moins 24 h. Complète seulement sur un nouvel appareil ou avec le bouton « Tout resynchroniser » */
+const t0=Date.now(),since=(FULL||!D.lastSync)?0:Math.max(0,D.lastSync-864e5),qs=since?'&updated_at=gt.'+since:'';FULL=0;CN_HIST=0;
+const [rc,rp]=await Promise.all([api('/rest/v1/cn_cahiers?select=*'+qs),api('/rest/v1/cn_pages?select=*'+qs)]);
 rc.forEach(r=>{let c=D.c.find(x=>x.id==r.id);if(!c){c={id:r.id,pages:[],u:0};D.c.push(c)}if(r.updated_at>(c.u||0))Object.assign(c,{cours:r.cours,prof:r.prof,color:r.color,del:r.deleted,u:r.updated_at,d:0})});
-rp.forEach(r=>{const c=D.c.find(x=>x.id==r.cahier_id);if(!c)return;let p=c.pages.find(x=>x.id==r.id);if(!p){p={id:r.id,u:0};c.pages.push(p)}if(r.updated_at>(p.u||0)){Object.assign(p,{chap:r.chap,sujet:r.sujet,start:r.start_at,end:r.end_at,html:r.html,fav:r.fav,tags:r.tags?r.tags.split(','):[],u:r.updated_at,d:0});p.att=[...(p.att||[]).filter(x=>x.k=='a'),...(r.att||[]).map(x=>({...x,up:1}))];p.cpl=r.cpl||[]}});
+rp.forEach(r=>{const c=D.c.find(x=>x.id==r.cahier_id);if(!c)return;let p=c.pages.find(x=>x.id==r.id);if(!p){p={id:r.id,u:0};c.pages.push(p)}if(r.updated_at>(p.u||0)){gardeLocal(p);Object.assign(p,{chap:r.chap,sujet:r.sujet,start:r.start_at,end:r.end_at,html:r.html,fav:r.fav,tags:r.tags?r.tags.split(','):[],u:r.updated_at,d:0});p.att=[...(p.att||[]).filter(x=>x.k=='a'||(x.k=='p'&&!(r.att||[]).some(y=>y.id==x.id))),...(r.att||[]).map(x=>({...x,up:1}))];p.cpl=r.cpl||[]}});
+if(CN_HIST)toast('Une version de '+CN_HIST+' page(s) avec photos a été gardée sur ce téléphone avant la mise à jour');
 D.c.forEach(c=>c.pages.sort((a,b)=>a.start-b.start));try{await upl()}catch(e){}
-const cs=D.c.filter(c=>c.d),ps=[];D.c.forEach(c=>c.pages.forEach(p=>{if(p.d)ps.push([c,p])}));
+const cs=D.c.filter(c=>c.d),ps=[];D.c.forEach(c=>c.pages.forEach(p=>{if(p.d){if(pageTropLongue(p))signaleLongue(p);else ps.push([c,p])}}));
 const up=(t,b)=>b.length&&api('/rest/v1/'+t+'?on_conflict=id',{m:'POST',h:{Prefer:'resolution=merge-duplicates,return=minimal'},b});
 await up('cn_cahiers',cs.map(c=>({id:c.id,cours:c.cours,prof:c.prof||'',color:c.color,deleted:!!c.del,updated_at:c.u||Date.now()})));
-await up('cn_pages',ps.map(([c,p])=>({id:p.id,cahier_id:c.id,chap:p.chap||'',sujet:p.sujet||'',start_at:p.start,end_at:p.end||0,html:p.html||'',fav:!!p.fav,tags:(p.tags||[]).join(','),att:(p.att||[]).filter(x=>x.k=='p').map(x=>({id:x.id,k:x.k,n:x.n})),cpl:p.cpl||[],updated_at:p.u||Date.now()})));
-cs.forEach(c=>c.d=0);ps.forEach(([c,p])=>p.d=0);stat('Synchronisé à '+hm(Date.now()));raw();if($('.shelf')&&!$('#q').value)home()}
+await up('cn_pages',ps.map(([c,p])=>({id:p.id,cahier_id:c.id,chap:p.chap||'',sujet:p.sujet||'',start_at:p.start,end_at:p.end||0,html:htmlTexteSeul(p.html||''),fav:!!p.fav,tags:(p.tags||[]).join(','),cpl:cplTexteSeul(p.cpl||[]),updated_at:p.u||Date.now()})));
+cs.forEach(c=>c.d=0);ps.forEach(([c,p])=>p.d=0);D.lastSync=t0;stat('Synchronisé à '+hm(Date.now()));raw();if($('.shelf')&&!$('#q').value)home()}
 catch(e){stat('Hors ligne ou erreur : sera réessayé');if(e&&e.code==401)D.s=null}finally{busy=0}}
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 const idb=()=>new Promise((r,j)=>{const q=indexedDB.open('cn-files',1);q.onupgradeneeded=()=>q.result.createObjectStore('f');q.onsuccess=()=>r(q.result);q.onerror=j});
