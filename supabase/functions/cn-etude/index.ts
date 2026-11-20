@@ -2,7 +2,7 @@
 // POST { action: "revision"|"exam"|"grade", ... } avec le jeton de l'utilisateur.
 // Le contenu du cahier (notes, transcriptions, documents, légendes de dessins) est envoyé par l'application,
 // car audios, transcriptions et documents sont stockés sur l'appareil (pas dans la base).
-import { admin, cors, getUser, hasPremium, isValidated, json, mistral, parseJson } from "../_shared/cn-common.ts";
+import { admin, cors, getUser, isValidated, json, mistral, parseJson } from "../_shared/cn-common.ts";
 
 const MAX = 120_000;
 const BASE = `Tu es un professeur rigoureux. Tu t'appuies UNIQUEMENT sur le contenu du cahier fourni
