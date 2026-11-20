@@ -121,18 +121,8 @@
           if (wc) meta.cpl = (p.cpl || []).map(function (x) { return { t: x.t, h: clean(x.h || ''), k: x.k }; });
           await api('/rest/v1/cn_partages', { m: 'POST', h: { Prefer: 'return=minimal' }, b: Object.assign({ kind: 'page', groupe: grp, ordre: i + 1, titre: cur.cours, chap: p.chap || '', sujet: p.sujet || '', html: clean(p.html || '').slice(0, 150000), meta: meta }, r.d) });
           n++;
-          if (wa) for (var j = 0; j < (p.att || []).length; j++) {
-            var x = p.att[j]; if (x.k != 'a' || x.st == 'rec') continue;
-            var b = await fget(x.id); if (!b || b.size > MAXB) { skip++; continue; }
-            var mime = b.type || 'audio/webm', e2 = ext(mime, true), path = await upload(b, mime, e2); files.push(path);
-            await api('/rest/v1/cn_partages', { m: 'POST', h: { Prefer: 'return=minimal' }, b: Object.assign({ kind: 'audio', groupe: grp, ordre: i + 1, titre: 'Audio : ' + (x.n || 'Enregistrement') + ' · ' + cur.cours, chap: '', sujet: x.n || '', html: '', nom: (x.n || 'Audio') + '.' + e2, fichier_path: path, mime: mime, taille: b.size }, r.d) });
-          }
         }
-        if (wd) for (var k = 0; k < (cur.docs || []).length; k++) {
-          var d = cur.docs[k], bb = await fget('doc:' + d.id); if (!bb || bb.size > MAXB) { skip++; continue; }
-          var pdf = d.t == 'pdf', m2 = bb.type || (pdf ? 'application/pdf' : DOCX), e3 = ext(m2, false, pdf), p3 = await upload(bb, m2, e3); files.push(p3);
-          await api('/rest/v1/cn_partages', { m: 'POST', h: { Prefer: 'return=minimal' }, b: Object.assign({ kind: pdf ? 'pdf' : 'doc', groupe: grp, ordre: 0, titre: 'Document : ' + d.n + ' · ' + cur.cours, chap: '', sujet: d.n, html: '', nom: d.n + '.' + e3, fichier_path: p3, mime: m2, taille: bb.size }, r.d) });
-        }
+        /* fichiers : jamais envoyés en ligne (partage du téléphone plus haut) */
         toast('Cahier envoyé (' + cur.pages.length + ' page(s))' + (skip ? ' · ' + skip + ' fichier(s) non envoyé(s) (absent de cet appareil ou plus de 40 Mo)' : ''));
         o.remove();
       } catch (er) { files.forEach(delFile); toast(msg(er) + (n ? ' · envoi partiel, réessayez' : '')); btn.disabled = false; btn.textContent = '📥 Envoyer le cahier'; }
