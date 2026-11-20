@@ -16,6 +16,17 @@
   }
   var delFile = function (p) { return fetch(SB + '/storage/v1/object/cn-partages/' + p, { method: 'DELETE', headers: stH() }).catch(function () {}); };
 
+  /* Fichiers (audio, PDF, Word) : plus aucun stockage en ligne. Ils partent par le partage du téléphone (WhatsApp, Drive, e-mail…). */
+  window.v31ext = function (m, au, pdf) { return au ? (/mp4|aac|m4a/.test(m) ? 'm4a' : /ogg/.test(m) ? 'ogg' : /wav/.test(m) ? 'wav' : /mpeg|mp3/.test(m) ? 'mp3' : 'webm') : (pdf ? 'pdf' : 'docx'); };
+  window.v31partager = async function (files) {
+    if (!files || !files.length) return 0;
+    try {
+      if (navigator.canShare && navigator.canShare({ files: files })) { await navigator.share({ files: files, title: 'Cahier numérique' }); return files.length; }
+      toast('Le partage de fichiers n’est pas disponible sur cet appareil. Utilisez « 💾 Sauvegarder » puis envoyez le fichier avec WhatsApp ou Drive.');
+    } catch (e) { if (!(e && e.name == 'AbortError')) toast('Partage impossible : ' + String(e && e.message || e).slice(0, 80)); }
+    return 0;
+  };
+
   window.v11mail = async function () {
     var S = v11sel(), q = (($('#v11e') || {}).value || '').trim(), o = V11.it;
     if (!S.length) return toast('Cochez au moins un élément');
