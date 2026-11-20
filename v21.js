@@ -101,6 +101,18 @@
       btn.disabled = true; btn.textContent = 'Envoi en cours…';
       var grp = uid(), n = 0, skip = 0, files = [];
       try {
+        /* Audios, PDF et Word : plus de stockage en ligne, ils partent par le partage du téléphone. Les pages (texte) partent ensuite. */
+        var FS = [];
+        if (wa) for (var i0 = 0; i0 < cur.pages.length; i0++) for (var j0 = 0; j0 < (cur.pages[i0].att || []).length; j0++) {
+          var x0 = cur.pages[i0].att[j0]; if (x0.k != 'a' || x0.st == 'rec') continue;
+          var b0 = await fget(x0.id); if (!b0) { skip++; continue; }
+          var m0 = b0.type || 'audio/webm'; FS.push(new File([b0], (x0.n || 'Audio') + '.' + ext(m0, true), { type: m0 }));
+        }
+        if (wd) for (var k0 = 0; k0 < (cur.docs || []).length; k0++) {
+          var d0 = cur.docs[k0], bb0 = await fget('doc:' + d0.id); if (!bb0) { skip++; continue; }
+          var pdf0 = d0.t == 'pdf', m1 = bb0.type || (pdf0 ? 'application/pdf' : DOCX); FS.push(new File([bb0], d0.n + '.' + ext(m1, false, pdf0), { type: m1 }));
+        }
+        if (FS.length) await window.v31partager(FS);
         await tok();
         var e = $('#ed'); if (e && e.isContentEditable && pg) { pg.html = e.innerHTML; }
         for (var i = 0; i < cur.pages.length; i++) {
