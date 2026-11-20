@@ -46,11 +46,12 @@ async function genPart(want: string, content: string, prefix: string, max: numbe
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  let consumedUser = "", consumedKind = "";   // pour rendre la génération au compteur si elle échoue
   try {
     const user = await getUser(req);
     if (!user) return json({ error: "non_connecte" }, 401);
     if (!(await isValidated(user.id))) return json({ error: "non_valide" }, 403);
-    if (!(await hasPremium(user.id))) return json({ error: "premium_required" }, 402);
+    // Plus d'abonnement : révision et examen sont gratuits, avec une limite par jour (voir plus bas).
     const b = await req.json();
     const db = admin();
     const nb = String(b.notebook_id || "");
