@@ -31,10 +31,22 @@
     var S = v11sel(), q = (($('#v11e') || {}).value || '').trim(), o = V11.it;
     if (!S.length) return toast('Cochez au moins un élément');
     var mail = /^\S+@\S+\.\S+$/.test(q), tel = q.replace(/\D/g, '');
-    if (!mail && tel.length < 8) return toast('Indiquez un e-mail ou un numéro de téléphone valide');
-    if (!D.s) return toast('Connectez-vous d’abord');
-    if (mail && q.toLowerCase() == D.s.email.toLowerCase()) return toast('C’est votre propre adresse');
+    var ht = S.some(function (k) { return k[0] == 'n' || k[0] == 'l'; });   // il y a du texte à envoyer en ligne ?
+    if (ht && !mail && tel.length < 8) return toast('Indiquez un e-mail ou un numéro de téléphone valide');
+    if (ht && !D.s) return toast('Connectez-vous d’abord');
+    if (ht && mail && D.s && q.toLowerCase() == D.s.email.toLowerCase()) return toast('C’est votre propre adresse');
     var dest = mail ? { vers_email: q.toLowerCase() } : { vers_email: '', vers_tel: q }, n = 0, skip = 0;
+    /* Audios, PDF et Word : partage natif du téléphone, avant toute requête réseau (rien n'est stocké en ligne). */
+    var FS = [];
+    for (var i0 = 0; i0 < S.length; i0++) {
+      var k0 = S[i0], t0 = k0[0], id0 = k0.slice(2); if (t0 == 'n' || t0 == 'l') continue;
+      var au0 = t0 == 'a', it0 = (au0 ? o.a : o.d).find(function (a) { return a.id == id0; });
+      var b0 = it0 && await fget(au0 ? id0 : 'doc:' + id0);
+      if (!b0) { skip++; continue; }
+      var pdf0 = !au0 && it0.ty == 'pdf', m0 = b0.type || (au0 ? 'audio/webm' : pdf0 ? 'application/pdf' : DOCX);
+      FS.push(new File([b0], (it0.t || 'fichier') + '.' + window.v31ext(m0, au0, pdf0), { type: m0 }));
+    }
+    if (FS.length) { var nf = await window.v31partager(FS); if (!ht) { if (nf) v11close(); else if (skip) toast('Fichier absent de cet appareil'); return; } }
     try {
       await tok();
       for (var i = 0; i < S.length; i++) {
