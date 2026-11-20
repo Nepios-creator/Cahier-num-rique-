@@ -53,7 +53,7 @@ const K='cahier-num-v1';let D={c:[],bk:0};
 try{D=JSON.parse(localStorage.getItem(K))||D}catch(e){}
 if(D.pj!='pivaqcvrzwxplqtznliw'){D.pj='pivaqcvrzwxplqtznliw';D.s=null;D.st='';(D.c||[]).forEach(c=>{c.d=1;c.u=c.u||Date.now();c.pages.forEach(p=>{p.d=1;p.u=p.u||Date.now();(p.att||[]).forEach(x=>{if(x.k=='p')x.up=0})})})}
 let tm,st;const raw=()=>{try{localStorage.setItem(K,JSON.stringify(D))}catch(e){toast('Enregistrement impossible sur cet appareil')}};
-const save=()=>{const n=Date.now();[cur,pg].forEach(x=>{if(x){x.u=n;x.d=1}});raw();clearTimeout(st);st=setTimeout(()=>sync(),3000)};
+const save=()=>{const n=Date.now();[cur,pg].forEach(x=>{if(x){x.u=n;x.d=1}});raw();clearTimeout(st);st=setTimeout(()=>sync(),45000)};
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
