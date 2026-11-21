@@ -1,11 +1,15 @@
 // Edge Function « cn-fondeka-webhook » : reçoit les notifications de paiement Fondeka.
-// Déployer avec --no-verify-jwt :  supabase functions deploy cn-fondeka-webhook --no-verify-jwt
+// Déploiement : supabase functions deploy cn-fondeka-webhook --no-verify-jwt  (Fondeka n'envoie pas de jeton Supabase).
 // Authenticité vérifiée ICI (HMAC-SHA256 sur « timestamp.corps_brut »).
 // Secrets : FONDEKA_WEBHOOK_SECRET ; optionnel : FONDEKA_EXPECTED_ENV (LIVE par défaut).
+// Si le paiement porte un code ambassadeur, la vente est enregistrée côté ADG (au mieux : un échec n'empêche jamais l'activation).
 import { admin } from "../_shared/cn-common.ts";
 
 const enc = new TextEncoder();
 const ok = (t: string) => new Response(t, { status: 200 });
+
+const ADG_URL = "https://kearpnvypzztnnltmrpp.supabase.co";
+const ADG_KEY = "sb_publishable_whfpzyuXH1Qup_q2h5wPdg_QY9uKqpA";
 
 function safeEqual(a: string, b: string) {
   if (a.length !== b.length) return false;
@@ -22,6 +26,28 @@ async function sign(secret: string, timestamp: string, raw: Uint8Array) {
   msg.set(raw, prefix.length);
   return Array.from(new Uint8Array(await crypto.subtle.sign("HMAC", key, msg)))
     .map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+
+/** Lie le paiement à l'ambassadeur dans ADG (même fonction que l'application : register_sale). Résultat noté dans adg_status. */
+async function adgRegister(db: ReturnType<typeof admin>, pay: any) {
+  try {
+    const { data: u } = await db.auth.admin.getUserById(pay.user_id);
+    const r = await fetch(`${ADG_URL}/rest/v1/rpc/register_sale`, {
+      method: "POST",
+      headers: { apikey: ADG_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        p_ref_code: pay.ambassador_code, p_app_name: "Cahier numérique",
+        p_client_name: u?.user?.email ?? "Client", p_client_phone: pay.phone ?? "",
+        p_method: "mobile_money", p_amount: null, p_proof_url: "fondeka:" + pay.order_reference,
+      }),
+    });
+    const t = await r.text();
+    await db.from("cn_fondeka_payments").update(
+      r.ok ? { adg_status: "ok", adg_sale: t.replace(/"/g, "").slice(0, 64) } : { adg_status: ("erreur " + r.status + " " + t).slice(0, 200) },
+    ).eq("id", pay.id);
+  } catch (e) {
+    try { await db.from("cn_fondeka_payments").update({ adg_status: "erreur reseau" }).eq("id", pay.id); } catch { /* rien */ }
+  }
 }
 
 Deno.serve(async (req) => {
@@ -74,12 +100,15 @@ Deno.serve(async (req) => {
       return ok("montant");
     }
 
-    // 4) Paiement validé + abonnement prolongé, en une transaction idempotente.
+    // 4) Paiement validé + accès prolongé, en une transaction idempotente.
     const { data: res, error: e2 } = await db.rpc("cn_fondeka_complete", { p_order: order, p_fondeka_ref: fref, p_event: eventId });
     if (e2) return new Response("db", { status: 500 });
+
+    // 5) Lien ambassadeur (une seule fois, au premier traitement), sans jamais bloquer la réponse à Fondeka.
+    if (res === "applique" && pay.ambassador_code) await adgRegister(db, pay);
     return ok(String(res));
   } catch (e) {
-    console.error("webhook", String((e as any)?.message || e));
+    console.error("webhook", String((e as any)?.message || e).slice(0, 200));
     return new Response("erreur", { status: 500 });
   }
 });
