@@ -7,7 +7,9 @@
 (function () {
   'use strict';
   var METHODS = [
-    /* { n: 'NOM_EXACT_FONDEKA', l: 'Airtel Money' }, */
+    { n: 'AIRTEL_MONEY_DRC_CDF', l: 'Airtel Money' },
+    { n: 'MPESA_DRC_CDF', l: 'M-Pesa' },
+    { n: 'ORANGE_MONEY_DRC_CDF', l: 'Orange Money' },
   ];
   var PREFIX = '+243';                     /* indicatif utilisé si le numéro est saisi sans « + » (RDC) */
   var POLL_MS = 5000, POLL_MAX = 60;       /* vérification toutes les 5 s pendant 5 minutes */
