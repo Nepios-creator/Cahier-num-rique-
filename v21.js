@@ -77,12 +77,7 @@
 
   /* ---------- 3. Envoyer un cahier ---------- */
   function ext(m, au, pdf) { return au ? (/mp4|aac|m4a/.test(m) ? 'm4a' : /ogg/.test(m) ? 'ogg' : /wav/.test(m) ? 'wav' : /mpeg|mp3/.test(m) ? 'mp3' : 'webm') : (pdf ? 'pdf' : 'docx'); }
-  async function upload(b, mime, e) {
-    var path = uidT() + '/' + uid() + '.' + e;
-    var r = await fetch(SB + '/storage/v1/object/cn-partages/' + path, { method: 'POST', headers: Object.assign(stH(), { 'Content-Type': mime, 'x-upsert': 'false' }), body: b });
-    if (!r.ok) throw { message: 'upload' };
-    return path;
-  }
+  /* upload() supprimée : plus aucun fichier n'est envoyé vers le stockage en ligne. */
   window.v21cahier = function () {
     if (!cur) return;
     var np = cur.pages.length, nc = 0, na = 0, nd = (cur.docs || []).length, nt = 0;
