@@ -85,7 +85,7 @@
     var o = document.createElement('div'); o.id = 'ak'; o.dataset.v6 = 'dlg';
     var cb = function (id, l, n) { return n ? '<label style="display:flex;gap:10px;align-items:center;margin:8px 0"><input type=checkbox id=' + id + ' style="width:22px;height:22px;flex:none"><span>' + l + ' <small class=hint>(' + n + ')</small></span></label>' : ''; };
     o.innerHTML = '<div class=scb><b>📤 Envoyer le cahier « ' + esc(cur.cours) + ' »</b><p class=hint>Les ' + np + ' page(s) sont toujours envoyées. Cochez les détails à ajouter :</p>' +
-      cb('v21c', 'Notes complémentaires et leçons', nc) + cb('v21t', 'Étiquettes', nt) + cb('v21a', 'Audios', na) + cb('v21d', 'PDF et Word', nd) +
+      cb('v21c', 'Notes complémentaires et leçons', nc) + cb('v21t', 'Étiquettes', nt) + cb('v21a', 'Audios (partage du téléphone)', na) + cb('v21d', 'PDF et Word (partage du téléphone)', nd) +
       '<div class=f style="margin-top:10px"><label>Destinataire (e-mail ou téléphone)<input id=v21to autocomplete=off placeholder="E-mail ou téléphone"></label><button class=p id=v21go>📥 Envoyer le cahier</button><button id=v21x>Annuler</button></div></div>';
     document.body.appendChild(o);
     o.querySelector('#v21x').onclick = function () { o.remove(); };
