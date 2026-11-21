@@ -188,6 +188,7 @@ Tu corriges des copies avec bienveillance mais sans complaisance. Réponds par U
     }
     return json({ error: "action_inconnue" }, 400);
   } catch (e) {
+    if (consumedUser) { try { await admin().rpc("cn_etude_refund", { p_user: consumedUser, p_kind: consumedKind }); } catch (_) { /* on ignore */ } }
     const m = String((e as any)?.message || e);
     return json({ error: m === "no_key" ? "no_key" : "erreur", detail: m.slice(0, 200) }, m === "no_key" ? 503 : 500);
   }
