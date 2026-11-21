@@ -7,9 +7,12 @@
 (function () {
   'use strict';
   var METHODS = [
-    { n: 'AIRTEL_MONEY_DRC_CDF', l: 'Airtel Money' },
-    { n: 'MPESA_DRC_CDF', l: 'M-Pesa' },
-    { n: 'ORANGE_MONEY_DRC_CDF', l: 'Orange Money' },
+    { n: 'AIRTEL_MONEY_DRC_CDF', l: 'Airtel Money — francs (FC)' },
+    { n: 'MPESA_DRC_CDF', l: 'M-Pesa — francs (FC)' },
+    { n: 'ORANGE_MONEY_DRC_CDF', l: 'Orange Money — francs (FC)' },
+    { n: 'AIRTEL_MONEY_DRC', l: 'Airtel Money — dollars ($)' },
+    { n: 'MPESA_DRC', l: 'M-Pesa — dollars ($)' },
+    { n: 'ORANGE_MONEY_DRC', l: 'Orange Money — dollars ($)' },
   ];
   var PREFIX = '+243';                     /* indicatif utilisé si le numéro est saisi sans « + » (RDC) */
   var POLL_MS = 5000, POLL_MAX = 60;       /* vérification toutes les 5 s pendant 5 minutes */
@@ -34,6 +37,7 @@
     if (e === 'moyen_invalide') return 'Moyen de paiement invalide.';
     if (e === 'trop_de_demandes') return 'Trop de demandes. Patientez une minute puis réessayez.';
     if (e === 'fondeka_non_configure') return 'Le paiement n’est pas encore activé côté serveur.';
+    if (e === 'taux_indisponible') return 'Taux du dollar indisponible. Réessayez ou payez en francs (FC).';
     if (e === 'fondeka') return 'Fondeka a refusé la demande' + (j.detail ? ' : ' + j.detail : '') + '.';
     return 'Paiement indisponible pour le moment. Réessayez.';
   }
@@ -55,6 +59,19 @@
       var p = document.createElement('p'); p.className = 'hint'; p.style.margin = '8px 0';
       p.textContent = 'Paiement par mobile money. Vous recevrez une demande de confirmation sur votre téléphone ; le Premium s’active automatiquement dès que le paiement est confirmé (30 jours).';
       box.appendChild(p);
+      var pr = document.createElement('p'); pr.className = 'hint'; pr.style.cssText = 'margin:4px 0;font-weight:600'; box.appendChild(pr);
+      (async function () {
+        try {
+          await tok();
+          var qr = await fetch(SB + '/functions/v1/cn-fondeka-checkout', {
+            method: 'POST',
+            headers: { apikey: KEY, Authorization: 'Bearer ' + D.s.access_token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quote: true })
+          });
+          var q = await qr.json();
+          if (qr.ok && q.cdf) pr.textContent = 'Prix : ' + q.cdf + ' FC' + (q.usd ? ' ou ' + String(q.usd).replace('.', ',') + ' $ (taux du jour)' : '');
+        } catch (e) {}
+      })();
       var f = document.createElement('div'); f.className = 'f';
       var l1 = document.createElement('label'); l1.textContent = 'Moyen de paiement';
       var sel = document.createElement('select'); sel.style.cssText = 'font:inherit;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink)';
