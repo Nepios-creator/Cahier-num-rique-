@@ -62,6 +62,15 @@ Deno.serve(async (req) => {
       if (content.trim().length < 50) return json({ error: "cahier_vide" }, 400);
     }
 
+    // Limite par jour : 10 révisions et 5 examens (la correction reste libre). Compteur atomique côté base.
+    const kind = b.action === "revision" ? "revision" : b.action === "exam" ? "exam" : "";
+    if (kind) {
+      const { data: q, error: qe } = await db.rpc("cn_etude_consume", { p_user: user.id, p_kind: kind });
+      if (qe) throw qe;
+      if (!q?.ok) return json({ error: kind === "revision" ? "limite_revisions" : "limite_examens", used: q?.used, max: q?.max }, 429);
+      consumedUser = user.id; consumedKind = kind;
+    }
+
     if (b.action === "revision") {
       const mode = b.mode === "approfondie" ? "approfondie" : "general";
       const text = await mistral(REV[mode], `CONTENU DU CAHIER :\n${content}`, { max: 7000 });
