@@ -125,7 +125,7 @@ async function api(p,o={},au=1){const h={apikey:KEY,'Content-Type':'application/
 const stat=m=>{D.st=m;raw()};
 const acct=()=>D.s?`<p><b>☁️ ${esc(D.s.email)}</b></p><p class=hint>${D.st||''}</p><button class=p onclick="sync().then(menu)">Synchroniser maintenant</button><button onclick="out()">Se déconnecter</button>`:`<p><b>☁️ Sauvegarde en ligne</b></p><label>E-mail<input id=em type=email></label><label>Mot de passe (6 caractères min.)<input id=pw type=password></label><button class=p onclick="auth(1)">Se connecter</button><button onclick="auth(0)">Créer un compte</button>`;
 function out(){D.s=null;raw();menu()}
-function setS(j){D.s={access_token:j.access_token,refresh_token:j.refresh_token,exp:Date.now()+j.expires_in*1000-60000,email:j.user.email}}
+function setS(j){D.s={access_token:j.access_token,refresh_token:j.refresh_token,exp:Date.now()+j.expires_in*1000-60000,email:j.user.email};if(D.syncUser!=j.user.id){D.syncUser=j.user.id;D.lastSync=0}}
 async function auth(login){const em=$('#em').value.trim(),pw=$('#pw').value;if(!em||pw.length<6)return toast('E-mail et mot de passe (6 caractères min.)');
 try{const j=await api(login?'/auth/v1/token?grant_type=password':'/auth/v1/signup',{m:'POST',b:{email:em,password:pw}},0);if(!j.access_token)return toast('Compte créé : confirmez votre e-mail, puis connectez-vous');setS(j);D.c.forEach(c=>{c.d=1;c.u=c.u||Date.now();c.pages.forEach(p=>{p.d=1;p.u=p.u||Date.now()})});raw();await sync();menu()}catch(e){toast(e.msg||e.error_description||e.message||'Échec de connexion')}}
 async function tok(){if(Date.now()>D.s.exp){setS(await api('/auth/v1/token?grant_type=refresh_token',{m:'POST',b:{refresh_token:D.s.refresh_token}},0));raw()}}
