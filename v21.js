@@ -156,7 +156,7 @@
             '<div><button class=ch onclick="v21keepG(\'' + e.g + '\')">＋ Enregistrer le cahier</button><button class=ch onclick="v21dropG(\'' + e.g + '\')">Ignorer</button></div></div>';
         }
         var x = e.one, f2 = !!x.fichier_path;
-        return '<div class=rs><b>' + (KI[x.kind] || '📝') + ' ' + esc(x.titre || 'Note') + '</b><small>De ' + esc(x.de_email) + ' · ' + dt(x.cree_le) + (f2 ? ' · ' + Math.max(1, Math.round((x.taille || 0) / 1024)) + ' Ko' : '') + '</small>' +
+        return '<div class=rs><b>' + (KI[x.kind] || '📝') + ' ' + esc(x.titre || 'Note') + '</b><small>De ' + esc(x.de_email) + ' · ' + dt(x.cree_le) + (f2 ? ' · ' + Math.max(1, Math.round((x.taille || 0) / 1024)) + ' Ko · ancien fichier en ligne' : '') + '</small>' +
           (f2 ? '' : '<span>' + esc(txt(x.html).slice(0, 160)) + '…</span>') +
           '<div><button class=ch onclick="v6keep(\'' + x.id + '\')">＋ Enregistrer dans mon cahier</button><button class=ch onclick="v6drop(\'' + x.id + '\')">Ignorer</button></div></div>';
       }).join('') || '<p class=hint>Rien reçu. Quand un collègue vous envoie une page, un cahier, un audio ou un document, cela apparaît ici.</p>';
