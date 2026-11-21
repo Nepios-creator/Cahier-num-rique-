@@ -146,7 +146,7 @@ async function v13act(a,d){
   try{const p=$('#v13p');if(p)p.textContent='Préparation du contenu du cahier…';const content=await v13collect(cur);
    if(a=='gen'){const r=await v13call('revision',{notebook_id:cur.id,mode:d.m,content});V13.rev=[r,...(V13.rev||[])];V13.cur=r;V13.screen='rev'}
    else{const r=await v13call('exam',{notebook_id:cur.id,mode:d.m,content});V13.exam={exam:r.exam,questions:r.questions,ans:{},t0:Date.now()};v13startExam()}}
-  catch(e){toast(v13err(e));if(e.code==402||e.message=='premium_required')await v13status()}
+  catch(e){toast(v13err(e));if(e.code==429)await v13status()}
   V13.busy=0;return v13draw()}
  if(a=='resume'){const s=lsg('v13cur:'+cur.id);if(s&&s.exam){V13.exam=s.exam;v13startExam(true);v13draw()}return}
  if(a=='submit')return v13submit(false);
