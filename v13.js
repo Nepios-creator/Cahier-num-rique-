@@ -107,9 +107,7 @@ async function v13load(){try{V13.rev=await api('/rest/v1/cn_revisions?select=id,
 
 const stBox=()=>{const s=V13.st;if(s===undefined)return'<div class=v13s>Vérification de votre accès…</div>';
  if(s===null)return'<div class=v13s>⚠️ Module pas encore activé (mise à jour de la base de données à faire par l’administrateur).</div>';
- const sb=s.status!='active'?'<button class=p data-a=sub>S’abonner</button>':'';
- if(!s.premium)return`<div class=v13s>🔒 Votre essai gratuit est terminé. ${sb}</div>`;
- return`<div class=v13s>${s.status=='active'?'✅ Abonnement actif jusqu’au '+dfr(s.current_period_end):'🎁 Essai gratuit jusqu’au '+dfr(s.trial_ends_at)}${s.status=='active'?'':' '+sb}</div>`};
+ return`<div class=v13s>🎁 Gratuit · aujourd’hui : ${s.rev_used}/${s.rev_max} révisions · ${s.exam_used}/${s.exam_max} examens</div>`};
 
 function v13draw(){const b=$('#v13b');if(!b)return;const sc=V13.screen;
  if(sc=='home'){const T=[['rev','📖 Révision'],['exam','📝 Examen'],['his','📊 Historique']];
