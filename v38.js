@@ -55,15 +55,15 @@ return wikiLecon()
 }
 window.cn34Lecon=window.cn38Lecon=lecon;
 window.cn34Wik=window.cn38Wik=openSearch;
-function mkb(t,f){var b=document.createElement('button');b.type='button';b.setAttribute('data-cn38','1');b.style.cssText='flex:none;white-space:nowrap';b.textContent=t;b.onpointerdown=function(e){e.preventDefault()};b.onclick=f;return b}
+function mkb(t,f){var b=document.createElement('button');b.type='button';b.setAttribute('data-cn38','1');b.textContent=t;b.onpointerdown=function(e){e.preventDefault()};b.onclick=f;return b}
 function ensure(){
-var tb=$('.ed .tb');if(!tb)return;
-Array.prototype.forEach.call(tb.querySelectorAll('[data-cn34]'),function(n){n.remove()});
-if(tb.querySelector('[data-cn38]'))return;
+var tb=$('.ed .tb'),gr=$('#v18t .gr');if(!tb||!gr)return;
+Array.prototype.forEach.call(document.querySelectorAll('.ed .tb [data-cn34],.ed .tb [data-cn38],.ed #v18t [data-cn34]'),function(n){n.remove()});
+if(gr.querySelector('[data-cn38]'))return;
 var b1=mkb('📘 Leçon complète',lecon),b2=mkb('📚 Wikipédia + web',openSearch);
-var cb=tb.querySelector('button[onclick^=enr]');
-tb.insertBefore(b1,cb?cb.nextSibling:tb.firstChild);
-tb.insertBefore(b2,b1.nextSibling);
+var cb=gr.querySelector('button[onclick^=enr]');
+gr.insertBefore(b1,cb?cb.nextSibling:gr.firstChild);
+gr.insertBefore(b2,b1.nextSibling);
 }
 try{new MutationObserver(function(){ensure()}).observe(document.body,{childList:true,subtree:true})}catch(x){}
 ensure();
