@@ -27,7 +27,7 @@ var ok=function(){toast('Texte de la page copié')};
 var fb=function(){var a=document.createElement('textarea');a.value=t;a.setAttribute('readonly','');a.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.appendChild(a);a.select();a.setSelectionRange(0,t.length);var d=false;try{d=document.execCommand('copy')}catch(x){}a.remove();if(d)ok();else toast('Copie impossible sur cet appareil')};
 if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,fb);else fb();
 }
-function addBtn(){
+function addBtn(){return;
 var tb=document.querySelector('.ed .tb');
 if(!tb||document.getElementById('cpall'))return;
 var b=document.createElement('button');b.id='cpall';b.type='button';b.textContent='📋 Copier tout';
