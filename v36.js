@@ -1,7 +1,7 @@
 /* v36 : « Tout sélectionner » limité au texte de la page ouverte + bouton « Copier tout ». À charger après v35.js. Surcouche : aucun fichier existant n’est modifié. */
 (function(){
 var st=document.createElement('style');
-st.textContent='.ed,.ed *{-webkit-user-select:none;user-select:none}.ed .sheet,.ed .sheet *,.ed textarea,.ed input,.ed #cp,.ed #cp *{-webkit-user-select:text;user-select:text}.ed #cp button{-webkit-user-select:none;user-select:none}#cpall{flex:none;white-space:nowrap}';
+st.textContent='.ed .eh,.ed .eh *,.ed .tb,.ed .tb *,.ed .meta,.ed .v18s,.ed .v18s *,.ed .v18t,.ed .v18t *{-webkit-user-select:none;user-select:none}.ed .sheet,.ed .sheet *,.ed textarea,.ed input{-webkit-user-select:text;user-select:text}.ed #cp,.ed #cp *{-webkit-user-select:text!important;user-select:text!important}.ed #cp button{-webkit-user-select:none!important;user-select:none!important}#cpall{flex:none;white-space:nowrap}';
 document.head.appendChild(st);
 function ed(){return document.getElementById('ed')}
 var lastT=null;
