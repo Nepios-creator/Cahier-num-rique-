@@ -99,6 +99,7 @@ window.cnk1Open=function(){if(!cur)return;if(S.nb!==cur.id){S.nb=cur.id;S.log=[]
   document.getElementById('cnk1s').onclick=go2;qi.onkeydown=function(e){if(e.key=='Enter')go2()};
   cnt();refresh()};
 
+window.cnxPassages=passages;window.cnxPick=pick;   // réutilisés par cahier-tfc.js
 /* ---------- Bouton dans l'écran du cahier ---------- */
 var ob=window.openB;if(typeof ob=='function')window.openB=function(){var r=ob.apply(this,arguments);try{window.cnxBtn('cnk1b','🔎 Demande à ton cahier',window.cnk1Open,false)}catch(e){}return r};
 })();
