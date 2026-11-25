@@ -9,7 +9,9 @@ var S={q:[],i:0,show:0,end:0,done:0,ti:0,need:0,rep:{}};
 function day(){return Math.floor((Date.now()+36e5)/864e5)}     // jour civil à Kinshasa (UTC+1)
 function C(){D.cards=D.cards||[];return D.cards}
 function nzs(t){return String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()}
-function plain(h){var d=document.createElement('div');d.innerHTML=h||'';return d}
+function plain(h){var d=document.createElement('div');d.innerHTML=h||'';
+  /* Sépare les blocs (titres, paragraphes, listes) pour que « Le système nerveux » + « Le neurone est… » ne soient pas collés en une seule phrase. */
+  Array.prototype.forEach.call(d.querySelectorAll('h1,h2,h3,h4,h5,h6,p,div,li,tr,blockquote,br'),function(e){e.appendChild(document.createTextNode('. '))});return d}
 function sents(t){t=String(t||'').replace(/\s+/g,' ').trim();return (t.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g)||[]).map(function(s){return s.trim()}).filter(function(s){return s.length>=25&&s.length<=320})}
 
 /* ---------- Création des cartes ---------- */
