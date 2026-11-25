@@ -1,5 +1,6 @@
 /* cahier-demande : « Demande à ton cahier ». Répond uniquement à partir des notes et des transcriptions d'audio du cahier ouvert,
-   avec renvoi vers la source (page ou audio). Texte uniquement. 10 réponses par jour et par cahier (limite appliquée côté serveur).
+   avec renvoi vers la source (page ou audio). Texte uniquement. 10 réponses par jour et par cahier (limite appliquée côté serveur ; illimité pour l'administration).
+   Les échanges sont conservés 14 jours sur l'appareil (D.cnk1h) puis effacés automatiquement.
    Dépend de la fonction serveur « cn-demande » (supabase/functions/cn-demande). À charger après les scripts vNN.js.
    Surcouche : aucun fichier existant n'est modifié ; le bouton est ajouté à l'écran d'un cahier. */
 (function(){
@@ -56,9 +57,14 @@ function pick(q,P){var qt=toks(q);if(!qt.length)return{top:P.slice(0,12),hit:0};
   var hit=sc.filter(function(x){return x.s>0}).length;sc.sort(function(a,b){return b.s-a.s});
   return{top:sc.slice(0,12).filter(function(x){return x.s>0}).map(function(x){return x.p}),hit:hit}}
 
+/* ---------- Historique : conservé 14 jours sur l'appareil, puis effacé ---------- */
+var KEEP_MS=14*864e5;
+function hist(id){D.cnk1h=D.cnk1h||{};var now=Date.now(),h=D.cnk1h,ch=false;Object.keys(h).forEach(function(k){var a=(h[k]||[]).filter(function(m){return now-m.at<KEEP_MS});if(a.length!==(h[k]||[]).length)ch=true;if(a.length)h[k]=a;else delete h[k]});if(ch){try{raw()}catch(e){}}return h[id]||[]}
+function keep(id,ms){D.cnk1h=D.cnk1h||{};var a=D.cnk1h[id]=D.cnk1h[id]||[];ms.forEach(function(m){a.push(m)});if(a.length>60)D.cnk1h[id]=a.slice(-60);try{raw()}catch(e){}}
+
 /* ---------- Écran ---------- */
 window.cnxCSS('cnk1css','#cnk1{position:fixed;inset:0;z-index:70;background:#000a;display:flex}#cnk1 .ck1w{box-sizing:border-box;margin:auto;width:100%;max-width:640px;height:100%;max-height:100dvh;display:flex;flex-direction:column;background:var(--bg);padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px))}#cnk1 .ck1h{display:flex;align-items:center;gap:8px}#cnk1 .ck1h b{flex:1;font-size:18px}#cnk1 .ck1l{flex:1;overflow-y:auto;margin:10px 0;display:grid;gap:10px;align-content:start}#cnk1 .ck1q,#cnk1 .ck1a{padding:10px 14px;border-radius:16px;line-height:1.55;white-space:pre-wrap;word-break:break-word}#cnk1 .ck1q{background:var(--acc);color:#fff;justify-self:end;max-width:88%}#cnk1 .ck1a{background:var(--card);border:1px solid var(--line)}#cnk1 .ck1s{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}#cnk1 .ck1r{display:flex;gap:8px}#cnk1 input.ck1t{flex:1;min-width:0}#cnk1 .ck1c{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}');
-function cnt(){var e=document.getElementById('cnk1n');if(e)e.textContent=S.rest==null?'':(S.rest+'/'+MAXJ+' réponses aujourd’hui')}
+function cnt(){var e=document.getElementById('cnk1n');if(e)e.textContent=S.rest==null?'':(S.rest===-1?'Réponses illimitées':(S.rest+'/'+MAXJ+' réponses aujourd’hui'))}
 function add(kind,text,srcs){var lg=document.getElementById('cnk1l');if(!lg)return null;var d=document.createElement('div');d.className='ck1'+kind;
   if(kind=='a'&&srcs){var parts=String(text).split(/\[([PA]\d+)\]/g);parts.forEach(function(x,i){if(i%2==0){d.appendChild(document.createTextNode(x))}else{var s=srcs.map[x];if(s){var sp=document.createElement('sup');sp.textContent='['+(srcs.order.indexOf(x)+1)+']';d.appendChild(sp)}}})}
   else d.textContent=text;
@@ -82,17 +88,20 @@ async function ask(q){if(S.busy)return;q=String(q||'').trim();if(q.length<3)retu
     var seen={},order=[],canon={};used.forEach(function(id){var key=map[id].src.k+':'+(map[id].src.aid||map[id].src.pid);if(!seen[key]){seen[key]=id;order.push(id)}canon[id]=seen[key]});
     var ans=String(j.answer||'').replace(/\[([PA]\d+)\]/g,function(m,id){return canon[id]?'['+canon[id]+']':''});
     wait.remove();add('a',ans,{map:map,order:order});
+    var t0=Date.now();keep(cur.id,[{k:'q',txt:q,at:t0},{k:'a',txt:ans,at:t0,srcs:order.map(function(id){return{id:id,label:map[id].label,src:map[id].src}})}]);
     if(typeof j.restant=='number'){S.rest=j.restant;cnt()}
   }catch(e){wait.textContent=window.cnxErr(String(e&&e.message||e))}finally{S.busy=0}}
 window.cnk1Open=function(){if(!cur)return;if(S.nb!==cur.id){S.nb=cur.id;S.log=[];S.rest=null}
   var o=document.getElementById('cnk1');if(o)o.remove();o=document.createElement('div');o.id='cnk1';
-  o.innerHTML='<div class=ck1w><div class=ck1h><b>🔎 Demande à ton cahier</b><span class=hint id=cnk1n></span><button id=cnk1x>✕</button></div>'
-   +'<div class=hint>Réponses uniquement tirées de vos notes et de vos audios transcrits de « '+esc(cur.cours)+' ».</div>'
+  o.innerHTML='<div class=ck1w><div class=ck1h><b>🔎 Demande à ton cahier</b><span class=hint id=cnk1n></span><button id=cnk1d title="Effacer la conversation">🗑</button><button id=cnk1x>✕</button></div>'
+   +'<div class=hint>Réponses uniquement tirées de vos notes et de vos audios transcrits de « '+esc(cur.cours)+' ». Vos échanges sont gardés 14 jours sur cet appareil, puis effacés.</div>'
    +'<div class=ck1c id=cnk1m><button class="ch on" data-m=repondre>Répondre</button><button class=ch data-m=simple>Explique-moi simplement</button><select id=cnk1g class=ch>'+LANGS.map(function(l){return '<option value='+l[0]+(window.cnxLang()==l[0]?' selected':'')+'>'+l[1]+'</option>'}).join('')+'</select></div>'
    +'<div class=ck1l id=cnk1l><div class=ck1a>Posez une question sur ce cours, par exemple « Qu’a dit le prof sur la synapse ? » ou « Explique-moi la prescription ».</div></div>'
    +'<div class=ck1r><input class=ck1t id=cnk1q placeholder="Votre question…" maxlength=600><button class=p style="width:auto;padding:10px 18px" id=cnk1s>Envoyer</button></div></div>';
   document.body.appendChild(o);
   document.getElementById('cnk1x').onclick=function(){o.remove()};
+  var H=hist(cur.id);if(H.length){var L=document.getElementById('cnk1l');L.innerHTML='';H.forEach(function(m){if(m.k=='q')add('q',m.txt);else{var mp={},od=[];(m.srcs||[]).forEach(function(x){mp[x.id]={label:x.label,src:x.src};od.push(x.id)});add('a',m.txt,{map:mp,order:od})}})}
+  document.getElementById('cnk1d').onclick=function(){if(!confirm('Effacer cette conversation ?'))return;if(D.cnk1h)delete D.cnk1h[cur.id];try{raw()}catch(e){}var L=document.getElementById('cnk1l');L.innerHTML='';add('a','Conversation effacée. Posez une nouvelle question.')};
   document.getElementById('cnk1g').onchange=function(){window.cnxSetLang(this.value)};
   Array.prototype.forEach.call(o.querySelectorAll('#cnk1m button'),function(b){b.onclick=function(){S.mode=b.dataset.m;Array.prototype.forEach.call(o.querySelectorAll('#cnk1m button'),function(x){x.classList.toggle('on',x===b)})}});
   var qi=document.getElementById('cnk1q'),go2=function(){var v=qi.value;qi.value='';ask(v)};
