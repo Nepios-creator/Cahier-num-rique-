@@ -17,21 +17,23 @@ function sents(t){t=String(t||'').replace(/\s+/g,' ').trim();return (t.match(/[^
 /* ---------- Création des cartes ---------- */
 var DEF=/^((?:(?:le|la|les|l['’]|un|une|des)\s?)?[A-Za-zÀ-ÿ][^,;:()]{2,55}?)\s+(est|sont|désigne|désignent|correspond à|correspondent à|signifie|se définit comme|est défini[e]?s? comme|consiste en|consiste à)\s+(.{12,280})$/i;
 var BAD=/^(il|elle|ils|elles|on|ce|cet|cette|ces|cela|ça|ceci|c['’]est|ici|donc|mais|ainsi|alors|voici|voilà|nous|vous|je|tu)\b/i;
-function fromText(txt,nb,pid,out){sents(txt).forEach(function(s){var m=s.replace(/^[-•–—*\d.)\s]+/,'').match(DEF);if(!m)return;var sub=m[1].trim();if(/^(est|sont)$/i.test(m[2])&&!/^(un|une|le|la|les|l['’]|des|du|de la|d['’]|celui|celle|ce qui|ce que)\b/i.test(m[3]))return;
+var NOTERM=' tel telle tels telles tout toute tous toutes autre autres meme memes cela ceci celui celle ceux celles chaque plusieurs certains certaines quelque quelques selon comme ainsi alors aussi donc mais car puis encore deja tres trop peu bien mal sans sous vers chez entre depuis pendant avant apres contre lors dont ou ou lorsque quand pourquoi comment ne pas plus moins fois cas partie ';
+function goodTerm(t){var w=t.trim().split(/\s+/);if(w.length>6)return false;if(/^[0-9\s.,%-]+$/.test(t))return false;var n=nzs(t);if(n.length<4&&!/^[A-ZÉÈÀ0-9]{2,}$/.test(t.trim()))return false;return w.some(function(x){var k=nzs(x);return k.length>=4&&NOTERM.indexOf(' '+k+' ')<0})}
+function fromText(txt,nb,pid,out,ttl){sents(txt).forEach(function(s){var m=s.replace(/^[-•–—*\d.)\s]+/,'').match(DEF);if(!m)return;var sub=m[1].trim();if(/^(est|sont)$/i.test(m[2])&&!/^(un|une|le|la|les|l['’]|des|du|de la|d['’]|celui|celle|ce qui|ce que)\b/i.test(m[3]))return;
     if(BAD.test(sub)||sub.split(/\s+/).length>8)return;
-    out.push({q:'Qu’est-ce que « '+sub.replace(/^(le|la|les|l['’]|un|une|des)\s?/i,'')+' » ?',a:s.replace(/^[-•–—*\d.)\s]+/,''),nb:nb,pid:pid,t:'def'})})}
-function fromEmph(h,nb,pid,out){var d=plain(h),seen={};
-  d.querySelectorAll('b,strong,mark,u').forEach(function(e){var term=(e.textContent||'').replace(/\s+/g,' ').trim();if(term.length<3||term.length>60||seen[term])return;seen[term]=1;
-    var all=sents(d.textContent),s=all.filter(function(x){return x.indexOf(term)>=0})[0];if(!s||s.length<term.length+18)return;
-    out.push({q:s.replace(term,'_____'),a:term,nb:nb,pid:pid,t:'trou',ctx:s})})}
+    out.push({q:'Qu’est-ce que « '+sub.replace(/^(le|la|les|l['’]|un|une|des)\s?/i,'')+' » ?',a:s.replace(/^[-•–—*\d.)\s]+/,''),nb:nb,pid:pid,t:'def',ttl:ttl||''})})}
+function fromEmph(h,nb,pid,out,ttl){var d=plain(h),seen={};
+  d.querySelectorAll('b,strong,mark,u').forEach(function(e){var term=(e.textContent||'').replace(/\s+/g,' ').trim();if(term.length<3||term.length>60||seen[term]||!goodTerm(term))return;seen[term]=1;
+    var all=sents(d.textContent),s=all.filter(function(x){return x.indexOf(term)>=0})[0];if(!s)return;s=s.trim().replace(/\.{2,}$/,'.');if(s.length<45||s.split(/\s+/).length<8||!/^[A-ZÉÈÊÀÂÎÔÛÇ«"]/.test(s)||BAD.test(s))return;
+    out.push({q:'Complétez : '+s.replace(term,'_____'),a:term,nb:nb,pid:pid,t:'trou',ctx:s,ttl:ttl||''})})}
 async function gen(c){var out=[],n=0;
   for(var i=0;i<c.pages.length;i++){var p=c.pages[i];if(p.del)continue;
-    fromText(plain(p.html).textContent,c.id,p.id,out);fromEmph(p.html,c.id,p.id,out);
-    (p.cpl||[]).forEach(function(q){fromText(plain(q.h).textContent,c.id,p.id,out);fromEmph(q.h,c.id,p.id,out)});
-    for(var j=0;j<(p.att||[]).length;j++){var x=p.att[j];if(x.k=='a'&&x.tr){var tr='';try{tr=await fget('tr:'+x.id)||''}catch(e){}if(tr)fromText(tr,c.id,p.id,out)}}}
+    var ttl=[p.chap,p.sujet].filter(Boolean).join(' · ');fromText(plain(p.html).textContent,c.id,p.id,out,ttl);fromEmph(p.html,c.id,p.id,out,ttl);
+    (p.cpl||[]).forEach(function(q){fromText(plain(q.h).textContent,c.id,p.id,out,ttl);fromEmph(q.h,c.id,p.id,out,ttl)});
+    for(var j=0;j<(p.att||[]).length;j++){var x=p.att[j];if(x.k=='a'&&x.tr){var tr='';try{tr=await fget('tr:'+x.id)||''}catch(e){}if(tr)fromText(tr,c.id,p.id,out,ttl)}}}
   var have={};C().forEach(function(k){have[k.sg]=1});
   out.forEach(function(k){if(n>=MAXGEN)return;var sg=c.id+'|'+nzs(k.q).slice(0,90);if(have[sg])return;have[sg]=1;n++;
-    C().push({id:'k'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),sg:sg,nb:k.nb,pid:k.pid,q:k.q,a:k.a,ctx:k.ctx||'',ef:2.5,iv:0,n:0,due:day()})});
+    C().push({id:'k'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),sg:sg,nb:k.nb,pid:k.pid,q:k.q,a:k.a,t:k.t||'def',ttl:k.ttl||'',ctx:k.ctx||'',ef:2.5,iv:0,n:0,due:day()})});
   if(C().length>3000)D.cards=C().slice(-3000);
   raw();return n}
 
@@ -41,6 +43,20 @@ function nxt(k,g){var iv=k.iv,ef=k.ef;      // g : 0 à revoir, 1 difficile, 2 b
   if(g==1)return{iv:Math.max(1,Math.round((iv||1)*1.2)),ef:Math.max(1.3,ef-.15),n:k.n+1};
   var base=k.n==0?1:k.n==1?3:Math.round(iv*ef);if(g==3)base=Math.max(base+1,Math.round(base*1.4));
   return{iv:Math.max(1,base),ef:g==3?ef+.15:ef,n:k.n+1}}
+/* Questions d'examen générées par l'IA (internet) : compréhension du contenu, pas de simple texte à trous. */
+async function genIA(c){
+  if(!window.cnxPassages)return{n:0,err:'erreur'};
+  var P=await window.cnxPassages(c);if(!P.length)return{n:0,err:'cahier_vide'};
+  var W=24;D.cgo=D.cgo||{};var off=D.cgo[c.id]||0;if(off>=P.length)off=0;
+  var sel=P.slice(off,off+W);if(sel.length<W&&P.length>W)sel=sel.concat(P.slice(0,W-sel.length));
+  D.cgo[c.id]=(off+W>=P.length)?0:off+W;
+  var j;try{j=await window.cnxCall('cn-cartes',{notebook_id:c.id,lang:'fr',count:8,cours:c.cours||'',passages:sel.map(function(p){return{id:p.id,label:p.label,text:p.text}})})}catch(e){return{n:0,err:String(e&&e.message||e)}}
+  if(j.error)return{n:0,err:j.error};
+  var map={};sel.forEach(function(p){map[p.id]=p});var have={};C().forEach(function(k){have[k.sg]=1});var n=0;
+  (j.cards||[]).forEach(function(k){var q=String(k.q||'').trim(),a=String(k.a||'').trim();if(q.length<12||a.length<3)return;var sg=c.id+'|'+nzs(q).slice(0,90);if(have[sg])return;have[sg]=1;n++;
+    var p=map[k.src]||sel[0];
+    C().push({id:'k'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),sg:sg,nb:c.id,pid:p.src.pid,q:q,a:a,t:'ia',ttl:(p.label||'').replace(/^Audio.*$/,'Audio du cours'),ctx:'',ef:2.5,iv:0,n:0,due:day()})});
+  if(C().length>3000)D.cards=C().slice(-3000);raw();return{n:n}}
 function lab(k,g){var r=nxt(k,g);return g==0?'< 1 j':r.iv+' j'}
 function due(){var t=day();return C().filter(function(k){return k.due<=t}).sort(function(a,b){return a.due-b.due})}
 
@@ -63,11 +79,14 @@ function menu(msg){var w=root(),d=due(),s=stk(),r=D.rem||{on:false,h:18,m:0},nbk
    +'<div class=cc1c><b>'+d.length+'</b> carte'+(d.length>1?'s':'')+' à réviser aujourd’hui sur '+C().length+'.<br><span class=hint>Les cartes reviennent au bon moment : plus vous les connaissez, plus elles s’espacent.</span></div>'
    +(msg?'<div class=cc1c>'+msg+'</div>':'')
    +'<div class=cc1r><button class=p id=cc1d style="width:auto">⚡ Défi du jour · 5 min</button></div>'
-   +(nbk?'<div class=cc1r><button id=cc1g>➕ Créer des cartes depuis « '+esc(nbk.cours)+' »</button></div>':'<div class=hint>Ouvrez un cahier pour créer des cartes à partir de ses notes.</div>')
+   +(nbk?'<div class=cc1c><b>Créer des cartes depuis « '+esc(nbk.cours)+' »</b><div class=cc1r style="margin-top:8px"><button class=p id=cc1ia>✨ Questions d’examen (avec internet)</button></div><div class=hint style="margin:4px 0 8px">L’IA lit vos notes et pose des questions comme à l’examen : définir, expliquer, comparer, énumérer. Les réponses viennent de vos notes.</div><div class=cc1r><button id=cc1g>📴 Cartes rapides (sans internet)</button></div><div class=hint style="margin-top:4px">Fabriquées sur l’appareil : définitions et phrases à compléter tirées de vos notes. Fonctionne hors ligne.</div></div>':'<div class=hint>Ouvrez un cahier pour créer des cartes à partir de ses notes.</div>')
    +'<div class=cc1c><b>⏰ Rappel quotidien</b><div class=cc1r style="margin-top:8px"><input type=time id=cc1t value="'+String(r.h).padStart(2,'0')+':'+String(r.m).padStart(2,'0')+'"><button id=cc1n>'+(r.on?'Désactiver':'Activer')+'</button><button id=cc1i>Ajouter à mon agenda</button></div><div class=hint style="margin-top:6px">Le rappel s’affiche quand l’application est ouverte ou récemment utilisée. Pour un rappel garanti même application fermée, ajoutez-le à l’agenda de votre téléphone.</div></div>'
    +'<div class=cc1c><b>Mes cartes</b><div class=cc1l id=cc1l></div></div>';
   bindX();
   document.getElementById('cc1d').onclick=function(){start()};
+  var ia=document.getElementById('cc1ia');if(ia)ia.onclick=async function(){if(!navigator.onLine)return menu('📴 Pas de connexion : utilisez les cartes rapides, ou réessayez avec internet.');ia.disabled=true;ia.textContent='L’IA prépare vos questions…';var r=await genIA(cur);
+    if(r.err)return menu(r.err=='limite_atteinte'?'Vous avez atteint la limite de générations de questions pour aujourd’hui. Revenez demain, ou utilisez les cartes rapides.':window.cnxErr(r.err));
+    menu(r.n?'✅ '+r.n+' question'+(r.n>1?'s':'')+' d’examen ajoutée'+(r.n>1?'s':'')+'. Relancez pour couvrir la suite du cahier.':'Pas de nouvelle question cette fois (déjà créées). Relancez pour passer à la suite du cahier.')};
   var g=document.getElementById('cc1g');if(g)g.onclick=async function(){g.disabled=true;g.textContent='Création…';var n=await gen(cur);menu(n?'✅ '+n+' nouvelle'+(n>1?'s':'')+' carte'+(n>1?'s':'')+' créée'+(n>1?'s':'')+' à partir de vos notes.':'Aucune nouvelle carte trouvée. Astuce : écrivez des définitions (« La synapse est… ») ou mettez les mots importants en gras.')};
   document.getElementById('cc1n').onclick=async function(){var v=document.getElementById('cc1t').value.split(':');var on=!(D.rem&&D.rem.on);
     D.rem={on:on,h:+v[0]||18,m:+v[1]||0,last:(D.rem&&D.rem.last)||0};raw();
@@ -91,7 +110,7 @@ function byId(id){return C().filter(function(k){return k.id===id})[0]}
 function card(){var k=byId(S.q[S.i]);S.over=Date.now()>=S.end;
   if(!k||(S.over&&S.done>=S.need))return fin();
   var w=root();w.innerHTML=head('⚡ Défi du jour')+'<div class=cc1r><span class=hint id=cc1tm>⏱ '+mmss(S.end-Date.now())+'</span><span class=hint style="text-align:right">Carte '+Math.min(S.i+1,S.q.length)+' / '+S.q.length+'</span></div>'
-   +'<div class="cc1c cc1f" id=cc1q></div>'+(S.show?'<div class="cc1c cc1f" id=cc1a style="min-height:90px;font-size:16px"></div>':'')
+   +'<div class=hint style="margin-top:-4px">'+(k.t=='ia'?'✨ Question d’examen':'📴 Carte rapide')+(k.ttl?' · '+esc(k.ttl):'')+'</div><div class="cc1c cc1f" id=cc1q></div>'+(S.show?'<div class="cc1c cc1f" id=cc1a style="min-height:90px;font-size:16px"></div>':'')
    +(S.show?'<div class=cc1g><button data-g=0>À revoir<br><small>'+lab(k,0)+'</small></button><button data-g=1>Difficile<br><small>'+lab(k,1)+'</small></button><button data-g=2>Bien<br><small>'+lab(k,2)+'</small></button><button data-g=3>Facile<br><small>'+lab(k,3)+'</small></button></div><div class=cc1r><button id=cc1s>📄 Voir dans le cahier</button></div>'
      :'<button class=p id=cc1v>Afficher la réponse</button>');
   document.getElementById('cc1q').textContent=k.q;bindX();var a=document.getElementById('cc1a');if(a)a.textContent=k.a;
