@@ -145,5 +145,6 @@ function remind(){try{var r=D.rem;if(!r||!r.on)return;var n=new Date(Date.now()+
     if(navigator.serviceWorker&&navigator.serviceWorker.ready)navigator.serviceWorker.ready.then(function(g){return g.showNotification('Cahier numérique',o)}).catch(function(){try{new Notification('Cahier numérique',o)}catch(e){}});
     else try{new Notification('Cahier numérique',o)}catch(e){}}
   toast(msg)}catch(e){}}
+setTimeout(function(){try{var n0=C().length;D.cards=C().filter(function(k){return !badCard(k)});if(D.cards.length!==n0){raw();chip()}}catch(e){}},1000);
 setInterval(remind,60000);document.addEventListener('visibilitychange',function(){if(!document.hidden){remind();chip()}});setTimeout(function(){remind();chip()},1500);
 })();
