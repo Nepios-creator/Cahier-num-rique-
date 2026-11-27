@@ -78,10 +78,13 @@ async function ask(q){if(S.busy)return;q=String(q||'').trim();if(q.length<3)retu
   S.busy=1;add('q',q);var wait=add('a','Je cherche dans vos notes et vos audios…');
   try{var P=await passages(cur);
     if(!P.length){wait.textContent=window.cnxErr('cahier_vide');return}
-    var r=pick(q,P);
-    if(!r.top.length&&P.length>12){wait.textContent='Je ne trouve pas cela dans votre cahier. Essayez avec les mots employés dans le cours.';return}
-    var top=r.top.length?r.top:P.slice(0,12);
-    var j=await window.cnxCall('cn-demande',{notebook_id:cur.id,question:q,mode:S.mode,lang:window.cnxLang(),passages:top.map(function(p){return{id:p.id,label:p.label,text:p.text}})});
+    /* L'IA comprend la question : on lui envoie un large échantillon du cahier (pas seulement les passages qui contiennent les mêmes mots). */
+    var BUD=26000,MAXP=40,tot=P.reduce(function(n,p){return n+p.text.length},0),top;
+    if(tot<=BUD&&P.length<=MAXP)top=P;
+    else{var rk=pick(q,P).rank||P,pick2=[],used=0;for(var z=0;z<rk.length&&pick2.length<MAXP;z++){if(used+rk[z].text.length>BUD)continue;pick2.push(rk[z]);used+=rk[z].text.length}
+      top=pick2.sort(function(a,b){return P.indexOf(a)-P.indexOf(b)})}
+    var H0=hist(cur.id),hh=[];for(var h=H0.length-1;h>=1&&hh.length<2;h--){if(H0[h].k=='a'&&H0[h-1].k=='q')hh.unshift({q:H0[h-1].txt,a:H0[h].txt})}
+    var j=await window.cnxCall('cn-demande',{notebook_id:cur.id,question:q,mode:S.mode,lang:window.cnxLang(),hist:hh,passages:top.map(function(p){return{id:p.id,label:p.label,text:p.text}})});
     if(j.error){wait.textContent=window.cnxErr(j.error);if(typeof j.restant=='number'){S.rest=j.restant;cnt()}return}
     var map={};top.forEach(function(p){map[p.id]=p});var used=(j.sources||[]).filter(function(id){return map[id]});
     // Un seul bouton par page ou audio, même si plusieurs extraits de la même source sont cités.
