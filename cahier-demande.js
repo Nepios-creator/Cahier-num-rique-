@@ -92,7 +92,8 @@ async function ask(q){if(S.busy)return;q=String(q||'').trim();if(q.length<3)retu
     var fast=!!(ix&&ix.ready&&ix.top.length);
     /* L'IA comprend la question : on lui envoie un large échantillon du cahier (pas seulement les passages qui contiennent les mêmes mots). */
     var BUD=26000,MAXP=40,tot=P.reduce(function(n,p){return n+p.text.length},0),top;
-    if(fast)top=ix.top;
+    if(broad)top=spread(P,BUD,MAXP);
+    else if(fast)top=ix.top;
     else if(tot<=BUD&&P.length<=MAXP)top=P;
     else{var rk=pick(q,P).rank||P,pick2=[],used=0;for(var z=0;z<rk.length&&pick2.length<MAXP;z++){if(used+rk[z].text.length>BUD)continue;pick2.push(rk[z]);used+=rk[z].text.length}
       top=pick2.sort(function(a,b){return P.indexOf(a)-P.indexOf(b)})}
