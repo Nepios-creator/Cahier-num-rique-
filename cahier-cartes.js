@@ -62,7 +62,9 @@ async function genIA(c){
     C().push({id:'k'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),sg:sg,nb:c.id,pid:p.src.pid,q:q,a:a,t:'ia',ttl:(p.label||'').replace(/^Audio.*$/,'Audio du cours'),ctx:'',ef:2.5,iv:0,n:0,due:day()})});
   if(C().length>3000)D.cards=C().slice(-3000);raw();return{n:n}}
 function lab(k,g){var r=nxt(k,g);return g==0?'< 1 j':r.iv+' j'}
-function due(){var t=day();return C().filter(function(k){return k.due<=t}).sort(function(a,b){return a.due-b.due})}
+function scope(){return (typeof cur!=='undefined'&&cur)?cur.id:null}
+function mine(all){var s=all?null:scope();return C().filter(function(k){return !s||k.nb==s})}
+function due(all){var t=day();return mine(all).filter(function(k){return k.due<=t}).sort(function(a,b){return a.due-b.due})}
 
 /* ---------- Série (jours consécutifs) ---------- */
 function stk(){var s=D.stk||{n:0,last:0,best:0},t=day();return {n:(s.last>=t-1)?s.n:0,last:s.last,best:s.best||0,today:s.last==t}}
@@ -80,7 +82,7 @@ function mmss(ms){ms=Math.max(0,Math.ceil(ms/1000));return Math.floor(ms/60)+':'
 function menu(msg){var w=root(),d=due(),s=stk(),r=D.rem||{on:false,h:18,m:0},nbk=(typeof cur!=='undefined'&&cur)?cur:null;
   w.innerHTML=head('🧠 Cartes de révision')
    +'<div class=cc1c><div class=cc1big>🔥 '+s.n+' jour'+(s.n>1?'s':'')+'</div>'+(s.today?'✅ Défi du jour fait. Bravo !':'Faites 5 cartes aujourd’hui pour garder votre série.')+(s.best?'<br><span class=hint>Meilleure série : '+s.best+' jour'+(s.best>1?'s':'')+'</span>':'')+'</div>'
-   +'<div class=cc1c><b>'+d.length+'</b> carte'+(d.length>1?'s':'')+' à réviser aujourd’hui sur '+C().length+'.<br><span class=hint>Les cartes reviennent au bon moment : plus vous les connaissez, plus elles s’espacent.</span></div>'
+   +'<div class=cc1c><b>'+d.length+'</b> carte'+(d.length>1?'s':'')+' à réviser aujourd’hui sur '+mine().length+'.<br><span class=hint>Les cartes reviennent au bon moment : plus vous les connaissez, plus elles s’espacent.</span></div>'
    +(msg?'<div class=cc1c>'+msg+'</div>':'')
    +'<div class=cc1r><button class=p id=cc1d style="width:auto">⚡ Défi du jour · 5 min</button></div>'
    +(nbk?'<div class=cc1c><b>Créer des cartes depuis « '+esc(nbk.cours)+' »</b><div class=cc1r style="margin-top:8px"><button class=p id=cc1ia>✨ Questions d’examen (avec internet)</button></div><div class=hint style="margin:4px 0 8px">L’IA lit vos notes et pose des questions comme à l’examen : définir, expliquer, comparer, énumérer. Les réponses viennent de vos notes.</div><div class=cc1r><button id=cc1g>📴 Cartes rapides (sans internet)</button></div><div class=hint style="margin-top:4px">Fabriquées sur l’appareil : définitions et phrases à compléter tirées de vos notes. Fonctionne hors ligne.</div></div>':'<div class=hint>Ouvrez un cahier pour créer des cartes à partir de ses notes.</div>')
@@ -101,7 +103,7 @@ function menu(msg){var w=root(),d=due(),s=stk(),r=D.rem||{on:false,h:18,m:0},nbk
       ymd=n.getUTCFullYear()+String(n.getUTCMonth()+1).padStart(2,'0')+String(n.getUTCDate()).padStart(2,'0');
     var ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Cahier numerique//FR','BEGIN:VEVENT','UID:defi-du-jour@cahier-numerique','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z','DTSTART;TZID=Africa/Kinshasa:'+ymd+'T'+h+m+'00','DURATION:PT5M','RRULE:FREQ=DAILY','SUMMARY:Défi du jour : 5 minutes de révision','BEGIN:VALARM','TRIGGER:PT0M','ACTION:DISPLAY','DESCRIPTION:Gardez votre série : 5 cartes dans le cahier numérique','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
     var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download='defi-du-jour.ics';document.body.appendChild(a);a.click();setTimeout(function(){a.remove()},500)};
-  var L=document.getElementById('cc1l'),shown=C().slice(-30).reverse();
+  var L=document.getElementById('cc1l'),shown=mine().slice(-30).reverse();
   if(!shown.length)L.innerHTML='<span class=hint>Aucune carte pour l’instant.</span>';
   shown.forEach(function(k){var r=document.createElement('div');r.className='cc1i';r.innerHTML='<span></span><button>🗑</button>';r.firstChild.textContent=k.q;
     r.lastChild.onclick=function(){D.cards=C().filter(function(x){return x.id!==k.id});raw();r.remove();chip()};L.appendChild(r)})}
@@ -139,8 +141,8 @@ var ob=window.openB;if(typeof ob=='function')window.openB=function(){var r=ob.ap
 
 /* ---------- Rappel (dans l'application) ---------- */
 function remind(){try{var r=D.rem;if(!r||!r.on)return;var n=new Date(Date.now()+36e5),mins=n.getUTCHours()*60+n.getUTCMinutes();
-  if(mins<r.h*60+r.m||r.last===day()||stk().today||!due().length)return;
-  r.last=day();raw();var msg='🧠 Défi du jour : '+Math.min(due().length,MIN_DAY)+' cartes, 5 minutes. Gardez votre série !';
+  if(mins<r.h*60+r.m||r.last===day()||stk().today||!due(1).length)return;
+  r.last=day();raw();var msg='🧠 Défi du jour : '+Math.min(due(1).length,MIN_DAY)+' cartes, 5 minutes. Gardez votre série !';
   if(window.Notification&&Notification.permission=='granted'){var o={body:msg,icon:'icon-192.png',tag:'defi-du-jour'};
     if(navigator.serviceWorker&&navigator.serviceWorker.ready)navigator.serviceWorker.ready.then(function(g){return g.showNotification('Cahier numérique',o)}).catch(function(){try{new Notification('Cahier numérique',o)}catch(e){}});
     else try{new Notification('Cahier numérique',o)}catch(e){}}
