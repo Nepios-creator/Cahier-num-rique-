@@ -85,7 +85,7 @@ async function ask(q){if(S.busy)return;q=String(q||'').trim();if(q.length<3)retu
   S.busy=1;add('q',q);var wait=add('a','Je cherche dans vos notes et vos audios…');
   try{var P=await passages(cur);
     if(!P.length){wait.textContent=window.cnxErr('cahier_vide');return}
-    var ix=null;try{if(window.cnxIdx){await window.cnxIdx.load(cur.id);ix=window.cnxIdx.query(cur,q,P)}}catch(e){ix=null}
+    var broad=BROAD.test(nz(q)),ix=null;try{if(window.cnxIdx&&!broad){await window.cnxIdx.load(cur.id);ix=window.cnxIdx.query(cur,q,P)}}catch(e){ix=null}
     if(ix&&ix.direct&&S.mode=='repondre'&&window.cnxLang()=='fr'){   /* réponse instantanée depuis l'index du cahier : aucun appel IA */
       var dp=ix.direct.p,mp0={};mp0[dp.id]=dp;var ans0=ix.direct.a+' ['+dp.id+']';wait.remove();add('a',ans0,{map:mp0,order:[dp.id]});
       var t1=Date.now();keep(cur.id,[{k:'q',txt:q,at:t1},{k:'a',txt:ans0,at:t1,srcs:[{id:dp.id,label:dp.label,src:dp.src}]}]);return}
