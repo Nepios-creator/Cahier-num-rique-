@@ -55,7 +55,7 @@ function pick(q,P){var qt=toks(q);if(!qt.length)return{top:P.slice(0,12),hit:0};
       if(!tf)return;docs.forEach(function(m){for(var d in m){if(d===w||(pre.length>=4&&d.indexOf(pre)===0)){df++;break}}});
       s+=(1+Math.log(tf))*Math.log(1+N/(1+df))});return{p:p,s:s}});
   var hit=sc.filter(function(x){return x.s>0}).length;sc.sort(function(a,b){return b.s-a.s});
-  return{top:sc.slice(0,12).filter(function(x){return x.s>0}).map(function(x){return x.p}),hit:hit}}
+  return{top:sc.slice(0,12).filter(function(x){return x.s>0}).map(function(x){return x.p}),hit:hit,rank:sc.map(function(x){return x.p})}}
 
 /* ---------- Historique : conservé 14 jours sur l'appareil, puis effacé ---------- */
 var KEEP_MS=14*864e5;
