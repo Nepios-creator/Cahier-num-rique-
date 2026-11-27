@@ -98,7 +98,7 @@ async function ask(q){if(S.busy)return;q=String(q||'').trim();if(q.length<3)retu
     else{var rk=pick(q,P).rank||P,pick2=[],used=0;for(var z=0;z<rk.length&&pick2.length<MAXP;z++){if(used+rk[z].text.length>BUD)continue;pick2.push(rk[z]);used+=rk[z].text.length}
       top=pick2.sort(function(a,b){return P.indexOf(a)-P.indexOf(b)})}
     var H0=hist(cur.id),hh=[];for(var h=H0.length-1;h>=1&&hh.length<2;h--){if(H0[h].k=='a'&&H0[h-1].k=='q')hh.unshift({q:H0[h-1].txt,a:H0[h].txt})}
-    var j=await window.cnxCall('cn-demande',{notebook_id:cur.id,question:q,mode:S.mode,lang:window.cnxLang(),hist:hh,fast:fast,passages:top.map(function(p){return{id:p.id,label:p.label,text:p.text}})});
+    var j=await window.cnxCall('cn-demande',{notebook_id:cur.id,question:broad?q+SYNTH:q,mode:S.mode,lang:window.cnxLang(),hist:hh,fast:fast,passages:top.map(function(p){return{id:p.id,label:p.label,text:p.text}})});
     if(j.error){wait.textContent=window.cnxErr(j.error);if(typeof j.restant=='number'){S.rest=j.restant;cnt()}return}
     var map={};top.forEach(function(p){map[p.id]=p});var used=(j.sources||[]).filter(function(id){return map[id]});
     // Un seul bouton par page ou audio, même si plusieurs extraits de la même source sont cités.
