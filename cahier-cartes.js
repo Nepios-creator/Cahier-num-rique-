@@ -24,7 +24,7 @@ var ANA=/(^|[^a-zà-ÿ])(cet|cette|ces|celui|celle|ceux|celles|ledit|ladite|lesd
 function anaph(t){return ANA.test(String(t||'').replace(/^[-•–—*\d.)\s]+/,''))}
 function badCard(k){if(k.t=='ia')return false;return anaph(k.t=='trou'?(k.ctx||k.q.replace(/^Complétez : /,'')):(k.a+' '+k.q))}
 function fromText(txt,nb,pid,out,ttl){sents(txt).forEach(function(s){var m=s.replace(/^[-•–—*\d.)\s]+/,'').match(DEF);if(!m)return;var sub=m[1].trim();if(/^(est|sont)$/i.test(m[2])&&!/^(un|une|le|la|les|l['’]|des|du|de la|d['’]|celui|celle|ce qui|ce que)\b/i.test(m[3]))return;
-    if(BAD.test(sub)||sub.split(/\s+/).length>8)return;
+    if(BAD.test(sub)||sub.split(/\s+/).length>8||anaph(s))return;
     out.push({q:'Qu’est-ce que « '+sub.replace(/^(le|la|les|l['’]|un|une|des)\s?/i,'')+' » ?',a:s.replace(/^[-•–—*\d.)\s]+/,''),nb:nb,pid:pid,t:'def',ttl:ttl||''})})}
 function fromEmph(h,nb,pid,out,ttl){var d=plain(h),seen={};
   d.querySelectorAll('b,strong,mark,u').forEach(function(e){var term=(e.textContent||'').replace(/\s+/g,' ').trim();if(term.length<3||term.length>60||seen[term]||!goodTerm(term))return;seen[term]=1;
