@@ -28,7 +28,7 @@ function fromText(txt,nb,pid,out,ttl){sents(txt).forEach(function(s){var m=s.rep
     out.push({q:'Qu’est-ce que « '+sub.replace(/^(le|la|les|l['’]|un|une|des)\s?/i,'')+' » ?',a:s.replace(/^[-•–—*\d.)\s]+/,''),nb:nb,pid:pid,t:'def',ttl:ttl||''})})}
 function fromEmph(h,nb,pid,out,ttl){var d=plain(h),seen={};
   d.querySelectorAll('b,strong,mark,u').forEach(function(e){var term=(e.textContent||'').replace(/\s+/g,' ').trim();if(term.length<3||term.length>60||seen[term]||!goodTerm(term))return;seen[term]=1;
-    var all=sents(d.textContent),s=all.filter(function(x){return x.indexOf(term)>=0})[0];if(!s)return;s=s.trim().replace(/\.{2,}$/,'.');if(s.length<45||s.split(/\s+/).length<8||!/^[A-ZÉÈÊÀÂÎÔÛÇ«"]/.test(s)||BAD.test(s))return;
+    var all=sents(d.textContent),s=all.filter(function(x){return x.indexOf(term)>=0})[0];if(!s)return;s=s.trim().replace(/\.{2,}$/,'.');if(s.length<45||s.split(/\s+/).length<8||!/^[A-ZÉÈÊÀÂÎÔÛÇ«"]/.test(s)||BAD.test(s)||anaph(s))return;
     out.push({q:'Complétez : '+s.replace(term,'_____'),a:term,nb:nb,pid:pid,t:'trou',ctx:s,ttl:ttl||''})})}
 async function gen(c){var out=[],n=0;
   for(var i=0;i<c.pages.length;i++){var p=c.pages[i];if(p.del)continue;
