@@ -73,6 +73,13 @@ function add(kind,text,srcs){var lg=document.getElementById('cnk1l');if(!lg)retu
   lg.appendChild(d);lg.scrollTop=lg.scrollHeight;return d}
 function go(s){var o=document.getElementById('cnk1');if(o)o.remove();try{openB(cur.id);openP(s.pid);if(s.k=='a'&&typeof v11view=='function')setTimeout(function(){v11view(s.aid)},350)}catch(e){}}
 async function refresh(){if(!navigator.onLine||!D.s||!cur)return;try{var j=await window.cnxCall('cn-demande',{notebook_id:cur.id,peek:true});if(j&&typeof j.restant=='number'){S.rest=j.restant;cnt()}}catch(e){}}
+var BROAD=/(resum|synthes|toute la lecon|tout le cours|ensemble du cours|plan du cours|de quoi parle|points? (essentiel|important|cle)|a retenir|l essentiel|principaux|tous les chapitres|chaque chapitre|vue d ensemble|en bref)/;
+var SYNTH=' (Fais une synthèse structurée et complète de tout ce que les passages enseignent, page par page ou par grandes idées, en citant les sources.)';
+/* Questions larges (résumé, synthèse…) : on envoie des passages de TOUTES les pages, à tour de rôle, au lieu des seuls plus pertinents. */
+function spread(P,BUD,MAXP){var tot=P.reduce(function(n,p){return n+p.text.length},0);if(tot<=BUD&&P.length<=MAXP)return P;
+  var g={},ord=[];P.forEach(function(p){var k=p.src.k+':'+p.src.pid;if(!g[k]){g[k]=[];ord.push(k)}g[k].push(p)});
+  var out=[],used=0,r=0,more=true;while(more&&out.length<MAXP){more=false;for(var i=0;i<ord.length&&out.length<MAXP;i++){var p=g[ord[i]][r];if(!p)continue;more=true;if(used+p.text.length>BUD)continue;out.push(p);used+=p.text.length}r++}
+  return out.sort(function(a,b){return P.indexOf(a)-P.indexOf(b)})}
 async function ask(q){if(S.busy)return;q=String(q||'').trim();if(q.length<3)return toast('Écrivez votre question');
   if(!navigator.onLine)return toast(window.cnxErr('hors_ligne'));
   S.busy=1;add('q',q);var wait=add('a','Je cherche dans vos notes et vos audios…');
