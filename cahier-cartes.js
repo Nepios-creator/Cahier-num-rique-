@@ -19,6 +19,10 @@ var DEF=/^((?:(?:le|la|les|l['’]|un|une|des)\s?)?[A-Za-zÀ-ÿ][^,;:()]{2,55}?)
 var BAD=/^(il|elle|ils|elles|on|ce|cet|cette|ces|cela|ça|ceci|c['’]est|ici|donc|mais|ainsi|alors|voici|voilà|nous|vous|je|tu)\b/i;
 var NOTERM=' tel telle tels telles tout toute tous toutes autre autres meme memes cela ceci celui celle ceux celles chaque plusieurs certains certaines quelque quelques selon comme ainsi alors aussi donc mais car puis encore deja tres trop peu bien mal sans sous vers chez entre depuis pendant avant apres contre lors dont ou ou lorsque quand pourquoi comment ne pas plus moins fois cas partie ';
 function goodTerm(t){var w=t.trim().split(/\s+/);if(w.length>6)return false;if(/^[0-9\s.,%-]+$/.test(t))return false;var n=nzs(t);if(n.length<4&&!/^[A-ZÉÈÀ0-9]{2,}$/.test(t.trim()))return false;return w.some(function(x){var k=nzs(x);return k.length>=4&&NOTERM.indexOf(' '+k+' ')<0})}
+/* Phrase qui renvoie à un contexte absent (« cette obligation », « ce texte », « ledit »…) ou qui commence par un connecteur : jamais de carte. */
+var ANA=/(^|[^a-zà-ÿ])(cet|cette|ces|celui|celle|ceux|celles|ledit|ladite|lesdits|lesdites|susdit\w*|susmentionn\w*|précit\w*|ci-dessus|ci-dessous|ci-après|précédent\w*)(?![a-zà-ÿ])|(^|[^a-zà-ÿ])ce(?![a-zà-ÿ'’-])(?!\s+(qui|que|qu))|^(Elle|Il|Ils|Elles|Cela|Ceci|Ainsi|Toutefois|Cependant|Pourtant|En effet|Par ailleurs|De plus|Dès lors|Par conséquent|En outre|Or|Aussi|Donc|Mais|Et|Puis|Enfin|Ensuite)(?![a-zà-ÿ])/i;
+function anaph(t){return ANA.test(String(t||'').replace(/^[-•–—*\d.)\s]+/,''))}
+function badCard(k){if(k.t=='ia')return false;return anaph(k.t=='trou'?(k.ctx||k.q.replace(/^Complétez : /,'')):(k.a+' '+k.q))}
 function fromText(txt,nb,pid,out,ttl){sents(txt).forEach(function(s){var m=s.replace(/^[-•–—*\d.)\s]+/,'').match(DEF);if(!m)return;var sub=m[1].trim();if(/^(est|sont)$/i.test(m[2])&&!/^(un|une|le|la|les|l['’]|des|du|de la|d['’]|celui|celle|ce qui|ce que)\b/i.test(m[3]))return;
     if(BAD.test(sub)||sub.split(/\s+/).length>8)return;
     out.push({q:'Qu’est-ce que « '+sub.replace(/^(le|la|les|l['’]|un|une|des)\s?/i,'')+' » ?',a:s.replace(/^[-•–—*\d.)\s]+/,''),nb:nb,pid:pid,t:'def',ttl:ttl||''})})}
