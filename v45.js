@@ -6,7 +6,7 @@
    Les comptes jamais abonnes gardent exactement le parcours d'origine. */
 (function () {
   'use strict';
-  var CONSULT = false, RUN = 0, SYNC0 = null, END0 = '';
+  var CONSULT = false, RUN = 0, SYNC0 = null, SAVE0 = null, FDEL0 = null, END0 = '';
   var VIEW = { n: 'list', c: '', p: '' };
   var $$ = function (s) { return document.querySelector(s); };
   var on = function (s, f) { var e = $$(s); if (e) e.onclick = f; };
@@ -59,11 +59,11 @@
     say('Paiement indisponible pour le moment.');
   }
   function consult() {
-    if (!CONSULT) { CONSULT = true; SYNC0 = window.sync; window.sync = function () { return Promise.resolve(); }; }
+    if (!CONSULT) { CONSULT = true; SYNC0 = window.sync; window.sync = function () { return Promise.resolve(); }; SAVE0 = window.save; window.save = function () {}; FDEL0 = window.fdel; window.fdel = function () { return Promise.resolve(); }; }
     VIEW = { n: 'list', c: '', p: '' }; draw();
   }
   function leave() {
-    if (CONSULT) { CONSULT = false; if (SYNC0) window.sync = SYNC0; SYNC0 = null; }
+    if (CONSULT) { CONSULT = false; if (SYNC0) window.sync = SYNC0; SYNC0 = null; if (SAVE0) window.save = SAVE0; SAVE0 = null; if (FDEL0) window.fdel = FDEL0; FDEL0 = null; }
   }
 
   /* ---------- Consultation en lecture seule ---------- */
@@ -159,7 +159,9 @@
   }
   function wire() {
     var r = $$('#v45r'); if (!r) return;
-    r.onclick = function (ev) {
+    ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend', 'dblclick', 'contextmenu', 'keydown', 'keyup', 'change', 'paste', 'cut', 'drop', 'dragstart'].forEach(function (n) { r.addEventListener(n, function (ev) { if (ev.target && ev.target.id === 'q45') return; ev.stopPropagation(); if (n === 'contextmenu' || n === 'paste' || n === 'cut' || n === 'drop') ev.preventDefault(); }, true); });
+    r.addEventListener('click', function (ev) {
+      ev.stopPropagation();
       var t = ev.target && ev.target.closest ? ev.target.closest('[data-go],[data-a],#bk45,#rb45,#lo45') : null; if (!t) return;
       if (t.id === 'rb45') return resub();
       if (t.id === 'bk45') return back();
@@ -168,7 +170,7 @@
       var g = t.getAttribute('data-go');
       if (g === 'c') { VIEW = { n: 'cahier', c: t.getAttribute('data-c'), p: '' }; draw(); }
       else if (g === 'p') { VIEW = { n: 'page', c: t.getAttribute('data-c'), p: t.getAttribute('data-p') }; draw(); }
-    };
+    }, true);
   }
 
   /* ---------- Detection de la fin d'abonnement ---------- */
