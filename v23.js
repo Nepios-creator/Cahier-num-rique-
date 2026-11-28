@@ -84,6 +84,7 @@
       var fin2 = async function () { var pending = 0, j; for (j = 0; j < k; j++) { if (mem[j]) pending = 1; } if (!pending && !lost) return fin(x); var parts = [], dead = 0, i, b; for (i = 0; i < k; i++) { b = mem[i]; if (!b && !dead) { try { b = await Promise.race([fget(id + '#' + String(i).padStart(6, '0')), new Promise(function (res) { setTimeout(function () { res('T'); }, 4000); })]); } catch (e) {} if (b === 'T') { dead = 1; b = null; } } if (b) parts.push(b); } if (!parts.length) return fin(x); var blob = new Blob(parts, { type: x.m || 'audio/webm' }); var ok = false; try { ok = await Promise.race([fput(id, blob).then(function () { return true; }), new Promise(function (res) { setTimeout(function () { res(false); }, 30000); })]); } catch (e) {} if (!ok) { try { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = String(x.n || 'cours').replace(/[^\w\-]+/g, '_') + '.' + (/mp4|aac/.test(x.m || '') ? 'm4a' : 'webm'); document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 1000); toast('Stockage indisponible : l\u2019audio a \u00e9t\u00e9 t\u00e9l\u00e9charg\u00e9 pour ne pas \u00eatre perdu'); } catch (e) {} } x.d = parts.length; delete x.st; };
       r.onstop = async function () {
         try { st.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+        try { document.removeEventListener('visibilitychange', onvis); } catch (e) {}
         try { wl && wl.release(); } catch (e) {}
         try { if (typeof v11tStop == 'function') v11tStop(); } catch (e) {}
         await Promise.race([q, new Promise(function (res) { setTimeout(res, 8000); })]);
@@ -93,7 +94,7 @@
           var rc0 = $('#rc'); if (rc0) rc0.textContent = '🎙'; if (!IOS && !dOn) keep(0); if (pg == P0) atts(); clas();
           return toast('Aucun son enregistré : vérifiez le micro et réessayez');
         }
-        await fin2(); P0.u = Date.now(); P0.d = 1; raw(); setTimeout(sync, 3000);
+        await fin2(); try { var el = Math.round((Date.now() - x.t) / 1000), sv = x.d || 0; if (el - sv > 30) setTimeout(function () { alert('Attention : l\u2019enregistrement a dur\u00e9 ' + Math.floor(el / 60) + ' min mais seulement ' + (sv < 60 ? sv + ' s' : Math.round(sv / 60) + ' min') + ' d\u2019audio ont \u00e9t\u00e9 captur\u00e9es. Si vous n\u2019aviez pas mis en pause, le t\u00e9l\u00e9phone a coup\u00e9 le micro (\u00e9cran verrouill\u00e9 ou application quitt\u00e9e). Gardez l\u2019\u00e9cran allum\u00e9 et le cahier ouvert pendant l\u2019enregistrement.'); }, 600); } catch (e) {} P0.u = Date.now(); P0.d = 1; raw(); setTimeout(sync, 3000);
         var rc = $('#rc'); if (rc) rc.textContent = '🎙';
         if (!IOS && !dOn) keep(0);
         if (pg == P0) atts(); clas(); toast('Enregistrement ajouté au classeur audio');
@@ -102,6 +103,8 @@
         try { toast(message(e && e.error)); } catch (z) {}
         try { if (r.state != 'inactive') r.stop(); } catch (z) {}
       };
+      var onvis = async function () { try { if (document.hidden) { if (r.state == 'recording') r.requestData(); } else if (mr === r && r.state == 'recording') { wl = await Promise.race([navigator.wakeLock.request('screen'), new Promise(function (z) { setTimeout(z, 1500); })]); } } catch (e) {} };
+      document.addEventListener('visibilitychange', onvis);
       try { if (typeof v11tStart == 'function') v11tStart(); } catch (e) {}
       try { r.start(1000); } catch (e) { r.start(); }
       /* anti-veille : la boucle audio silencieuse perturbe le micro sur iPhone, on ne l'y utilise pas */
