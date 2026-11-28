@@ -201,12 +201,13 @@
     var l = $$('#cn45l'), t = $$('#cn45t'); if (!l || !t) return;
     try {
       var fin = (await rp('cn_admin_abonnements_termines')) || [];
-      l.innerHTML = (fin.length ? '<b>Comptes \u00e0 r\u00e9abonner (' + fin.length + ')</b>' : '<p class="hint">Aucun abonnement termin\u00e9 pour le moment.</p>') +
+      l.innerHTML = (fin.length ? '<b>Comptes \u00e0 r\u00e9abonner (' + fin.length + ')</b>' : '<p class="hint" style="font-size:13px">Aucun abonnement termin\u00e9 pour le moment.</p>') +
         fin.map(function (u) { return '<div class="rs"><b>' + E(u.email) + '</b><small>Fin le ' + E(fr(u.acces_jusqu)) + '</small><div><button class="ch" type="button" data-r="' + E(u.user_id) + '">\u21a9 R\u00e9tablir 30 jours</button></div></div>'; }).join('');
+      var nb = $$('#cn45n'); if (nb) { nb.textContent = String(fin.length); if (fin.length) { nb.style.background = '#dc2626'; nb.style.color = '#fff'; } }
       var all = (await rp('cn_admin_liste')) || [];
       var ok = all.filter(function (u) { return u.statut === 'valide'; });
-      t.innerHTML = '<div style="display:flex;gap:6px;margin:6px 0"><select id="cn45s" style="flex:1"><option value="">Choisir un compte valid\u00e9\u2026</option>' +
-        ok.map(function (u) { return '<option value="' + E(u.user_id) + '">' + E(u.email) + '</option>'; }).join('') + '</select><button class="ch" type="button" id="cn45b">Terminer son abonnement</button></div>';
+      t.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;margin:6px 0 10px"><select id="cn45s" style="width:100%;max-width:100%;box-sizing:border-box;font-size:15px;padding:10px"><option value="">Choisir un compte valid\u00e9\u2026</option>' +
+        ok.map(function (u) { return '<option value="' + E(u.user_id) + '">' + E(u.email) + '</option>'; }).join('') + '</select><button class="ch" type="button" id="cn45b" style="width:100%;box-sizing:border-box;font-size:15px;padding:10px 12px">Terminer son abonnement</button></div>';
     } catch (e) {
       l.innerHTML = '<p class="hint">' + (absent(e) ? 'Fonctions serveur absentes : ex\u00e9cutez une fois le fichier supabase/migrations/20261128000000_cn_fin_abonnement.sql dans le SQL Editor de Supabase.' : 'Liste indisponible.') + '</p>';
       t.innerHTML = '';
@@ -216,10 +217,12 @@
     var base = $$('#v6a'); if (!base || $$('#cn45')) return;
     if (typeof D === 'undefined' || !D.adm) return;
     var box = document.createElement('div'); box.id = 'cn45';
-    box.innerHTML = '<div class="card" style="margin:8px 0"><h3 style="margin:0 0 6px">\u23f3 Abonnements termin\u00e9s</h3>' +
-      '<p class="hint" style="margin:0 0 8px">Les comptes dont l\u2019abonnement est termin\u00e9 apparaissent ici automatiquement. Vous pouvez aussi provoquer la fin d\u2019abonnement d\u2019un compte pour essayer l\u2019\u00e9cran qu\u2019il verra (vous pourrez le r\u00e9tablir ensuite).</p>' +
-      '<div id="cn45t"></div><div id="cn45l"><p class="hint">Chargement\u2026</p></div></div>';
+    box.innerHTML = '<div style="margin:10px 0;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--card)"><div id="cn45h" style="display:flex;align-items:center;gap:8px;padding:12px 14px;cursor:pointer;font-weight:700;font-size:16px"><span style="flex:1">\u23f3 Abonnements termin\u00e9s</span><span id="cn45n" style="min-width:26px;text-align:center;padding:2px 8px;border-radius:12px;background:var(--line);font-size:13px">0</span><span id="cn45a" style="font-size:12px">\u25b8</span></div><div id="cn45c" style="padding:0 12px 12px;display:none">' +
+      '<p class="hint" style="margin:0 0 10px;font-size:13px;line-height:1.45">Les comptes dont l\u2019abonnement est termin\u00e9 apparaissent ici automatiquement. Vous pouvez aussi provoquer la fin d\u2019abonnement d\u2019un compte pour essayer l\u2019\u00e9cran qu\u2019il verra (vous pourrez le r\u00e9tablir ensuite).</p>' +
+      '<div id="cn45t"></div><div id="cn45l"><p class="hint">Chargement\u2026</p></div></div></div>';
     var w = $$('#cn37'), ref = w || base; ref.parentNode.insertBefore(box, ref);
+    var hd = $$('#cn45h'), bdy = $$('#cn45c'), arw = $$('#cn45a');
+    if (hd) hd.onclick = function () { var o = bdy.style.display === 'none'; bdy.style.display = o ? 'block' : 'none'; arw.textContent = o ? '\u25be' : '\u25b8'; };
     box.onclick = async function (ev) {
       var t = ev.target && ev.target.closest ? ev.target.closest('#cn45b,[data-r]') : null; if (!t) return;
       try {
